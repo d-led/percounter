@@ -13,6 +13,7 @@ type PersistentGCounter struct {
 	filename string
 	inner    *GCounter
 	sink     GCounterStateSink
+	observer CounterObserver
 }
 
 func NewPersistentGCounter(identity, filename string) *PersistentGCounter {
@@ -24,6 +25,7 @@ func NewPersistentGCounterWithSink(identity, filename string, sink GCounterState
 		inner:    NewGCounterFromState(identity, getStateFrom(filename)),
 		filename: filename,
 		sink:     sink,
+		observer: &noOpCounterObserver{},
 	}
 }
 
