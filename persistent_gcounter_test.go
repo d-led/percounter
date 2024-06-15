@@ -68,5 +68,6 @@ func TestPersistentGCounter(t *testing.T) {
 		c.Increment()
 		waitForGcounterValueOf(t, 3, c)
 		assert.Equal(t, int64(3), testsink.lastState.Peers["1"])
+		c.PersistSync()
 	})
 }
