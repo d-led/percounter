@@ -9,11 +9,11 @@ import (
 )
 
 func TestPersistentGCounter(t *testing.T) {
-	filename := tempFilename()
-	t.Cleanup(func() { os.Remove(filename) })
 	var lastCount int64
 
 	t.Run("one gcounter counter", func(t *testing.T) {
+		filename := tempFilename()
+		t.Cleanup(func() { os.Remove(filename) })
 		c := NewPersistentGCounter("1", filename)
 		c.Increment()
 		c.Increment()
@@ -26,15 +26,46 @@ func TestPersistentGCounter(t *testing.T) {
 	})
 
 	t.Run("picking up from persisted counter", func(t *testing.T) {
+		filename := tempFilename()
+		t.Cleanup(func() { os.Remove(filename) })
+		{
+			c := NewPersistentGCounter("1", filename)
+			c.Increment()
+			c.Increment()
+			c.Increment()
+		}
+		// wait for the write
+		time.Sleep(150 * time.Millisecond)
 		c := NewPersistentGCounter("1", filename)
 		c.Increment()
 		c.Increment()
 		c.Increment()
+		// wait for the write
+		time.Sleep(150 * time.Millisecond)
+		assert.Equal(t, int64(6), c.Value())
+	})
 
-		assert.Equal(t, lastCount+3, c.Value())
+	t.Run("merging with another counter", func(t *testing.T) {
+		filename := tempFilename()
+		t.Cleanup(func() { os.Remove(filename) })
+		c := NewPersistentGCounter("1", filename)
+		c.Increment()
+		c.Increment()
 		// wait for the write
 		time.Sleep(50 * time.Millisecond)
-		assert.Equal(t, lastCount+3, c.Value())
+
+		filename2 := tempFilename()
+		t.Cleanup(func() { os.Remove(filename2) })
+		c2 := NewPersistentGCounter("2", filename2)
+		c2.Increment()
+		// wait for the write
+		time.Sleep(150 * time.Millisecond)
+
+		c.MergeWith(c2)
+		// wait for the write
+		time.Sleep(50 * time.Millisecond)
+
+		assert.Equal(t, int64(3), c.Value())
 	})
 }
 

@@ -42,6 +42,13 @@ func (c *PersistentGCounter) Value() int64 {
 	return val
 }
 
+func (c *PersistentGCounter) MergeWith(other *PersistentGCounter) {
+	c.Act(c, func() {
+		c.inner.MergeWith(other.inner)
+		c.persist()
+	})
+}
+
 func (c *PersistentGCounter) persist() {
 	c.Act(c, func() {
 		b, err := json.Marshal(c.inner.state)
