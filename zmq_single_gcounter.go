@@ -91,14 +91,6 @@ func (z *ZmqSingleGcounter) SetState(s GCounterState) {
 	})
 }
 
-func (c *ZmqSingleGcounter) GetState() GCounterState {
-	var res GCounterState
-	phony.Block(c, func() {
-		res = c.inner.GetState()
-	})
-	return res
-}
-
 func (c *ZmqSingleGcounter) MergeWith(other GCounterStateSource) {
 	c.Act(c, func() {
 		c.inner.MergeWith(other)
