@@ -1,9 +1,7 @@
 package percounter
 
 import (
-	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -38,14 +36,6 @@ func TestAsyncGCounter(t *testing.T) {
 				}
 			}()
 		}
-		for w := 0; w < 15; w++ {
-			if goroutineCount*incrementCount == c.Value() {
-				// all ok
-				return
-			}
-			log.Println("waiting for the counter to arrive at the expected value...")
-			time.Sleep(100 * time.Millisecond)
-		}
-		assert.Equal(t, int64(goroutineCount*incrementCount), c.Value())
+		waitForGcounterValueOf(t, goroutineCount*incrementCount, c)
 	})
 }

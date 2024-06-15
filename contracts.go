@@ -8,6 +8,10 @@ type GCounterStateSink interface {
 	SetState(s GCounterState)
 }
 
+type ValueSource interface {
+	Value() int64
+}
+
 type noOpGcounterState struct{}
 
 func (n *noOpGcounterState) GetState() GCounterState  { return NewGcounterState() }

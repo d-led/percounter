@@ -1,80 +1,50 @@
 package percounter
 
 import (
-	"os"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestPersistentGCounter(t *testing.T) {
-	var lastCount int64
-
 	t.Run("one gcounter counter", func(t *testing.T) {
-		filename := tempFilename()
-		t.Cleanup(func() { os.Remove(filename) })
+		filename := newTempFilename(t)
 		c := NewPersistentGCounter("1", filename)
 		c.Increment()
 		c.Increment()
 		c.Increment()
-		lastCount = c.Value()
-		assert.Equal(t, int64(3), lastCount)
-
-		// wait for the write
-		time.Sleep(50 * time.Millisecond)
+		waitForGcounterValueOf(t, 3, c)
 	})
 
 	t.Run("picking up from persisted counter", func(t *testing.T) {
-		filename := tempFilename()
-		t.Cleanup(func() { os.Remove(filename) })
+		filename := newTempFilename(t)
 		{
 			c := NewPersistentGCounter("1", filename)
 			c.Increment()
 			c.Increment()
 			c.Increment()
+			waitForGcounterValueOf(t, 3, c)
 		}
-		// wait for the write
-		time.Sleep(150 * time.Millisecond)
+
 		c := NewPersistentGCounter("1", filename)
 		c.Increment()
 		c.Increment()
 		c.Increment()
-		// wait for the write
-		time.Sleep(150 * time.Millisecond)
-		assert.Equal(t, int64(6), c.Value())
+		waitForGcounterValueOf(t, 6, c)
 	})
 
 	t.Run("merging with another counter", func(t *testing.T) {
-		filename := tempFilename()
-		t.Cleanup(func() { os.Remove(filename) })
+		filename := newTempFilename(t)
 		c := NewPersistentGCounter("1", filename)
 		c.Increment()
 		c.Increment()
-		// wait for the write
-		time.Sleep(50 * time.Millisecond)
+		waitForGcounterValueOf(t, 2, c)
 
-		filename2 := tempFilename()
-		t.Cleanup(func() { os.Remove(filename2) })
+		filename2 := newTempFilename(t)
 		c2 := NewPersistentGCounter("2", filename2)
 		c2.Increment()
-		// wait for the write
-		time.Sleep(150 * time.Millisecond)
+		waitForGcounterValueOf(t, 1, c2)
 
 		c.MergeWith(c2)
-		// wait for the write
-		time.Sleep(50 * time.Millisecond)
 
-		assert.Equal(t, int64(3), c.Value())
+		waitForGcounterValueOf(t, 3, c)
 	})
-}
-
-func tempFilename() string {
-	f, err := os.CreateTemp(".", "*.gcounter")
-	if err != nil {
-		panic(err)
-	}
-	fn := f.Name()
-	_ = f.Close()
-	return fn
 }
