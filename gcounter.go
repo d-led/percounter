@@ -32,12 +32,16 @@ func (c *GCounter) Value() int64 {
 	return res
 }
 
-func (c *GCounter) MergeWith(other *GCounter) {
-	for peer, value := range other.state.Peers {
+func (c *GCounter) MergeWith(other GCounterStateSource) {
+	for peer, value := range other.GetState().Peers {
 		myValue := c.valueOf(peer)
 		newValue := int64(math.Max(float64(value), float64(myValue)))
 		c.setValueOf(peer, newValue)
 	}
+}
+
+func (c *GCounter) GetState() GCounterState {
+	return c.state
 }
 
 func (c *GCounter) valueOf(peer string) int64 {

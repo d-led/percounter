@@ -42,8 +42,16 @@ func (c *AsyncGCounter) Value() int64 {
 	return val
 }
 
-func (c *AsyncGCounter) MergeWith(other *AsyncGCounter) {
+func (c *AsyncGCounter) GetState() GCounterState {
+	var res GCounterState
+	phony.Block(c, func() {
+		res = c.inner.GetState()
+	})
+	return res
+}
+
+func (c *AsyncGCounter) MergeWith(other GCounterStateSource) {
 	c.Act(c, func() {
-		c.inner.MergeWith(other.inner)
+		c.inner.MergeWith(other)
 	})
 }

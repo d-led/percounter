@@ -42,9 +42,17 @@ func (c *PersistentGCounter) Value() int64 {
 	return val
 }
 
-func (c *PersistentGCounter) MergeWith(other *PersistentGCounter) {
+func (c *PersistentGCounter) GetState() GCounterState {
+	var res GCounterState
+	phony.Block(c, func() {
+		res = c.inner.GetState()
+	})
+	return res
+}
+
+func (c *PersistentGCounter) MergeWith(other GCounterStateSource) {
 	c.Act(c, func() {
-		c.inner.MergeWith(other.inner)
+		c.inner.MergeWith(other)
 		c.persist()
 	})
 }
@@ -62,7 +70,7 @@ func (c *PersistentGCounter) persist() {
 }
 
 func (c *PersistentGCounter) persistSync() {
-	b, err := json.Marshal(c.inner.state)
+	b, err := json.Marshal(c.inner.GetState())
 	if err != nil {
 		// something is not right with the setup
 		panic(err)
