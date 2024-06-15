@@ -24,4 +24,23 @@ func TestGCounter(t *testing.T) {
 		c.MergeWith(c2)
 		assert.Equal(t, int64(3), c.Value())
 	})
+
+	t.Run("merging with another counter with divergent memories", func(t *testing.T) {
+		c := NewGCounterFromState("1", GCounterState{
+			Peers: map[string]int64{
+				"1": 1,
+				"2": 1,
+				"3": 2,
+			},
+		})
+		c2 := NewGCounterFromState("2", GCounterState{
+			Peers: map[string]int64{
+				"1": 1,
+				"2": 2,
+				"3": 1,
+			},
+		})
+		c.MergeWith(c2)
+		assert.Equal(t, int64(5), c.Value())
+	})
 }
