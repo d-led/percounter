@@ -19,13 +19,18 @@ type ZmqSingleGcounter struct {
 	server   zmq4.Socket
 	peers    map[string]zmq4.Socket
 	started  bool
+	ctx      context.Context
+	stop     context.CancelFunc
 }
 
 func NewZmqSingleGcounter(identity, filename, bindAddr string) *ZmqSingleGcounter {
+	ctx, cancel := context.WithCancel(context.Background())
 	res := &ZmqSingleGcounter{
 		bindAddr: bindAddr,
-		server:   zmq4.NewPull(context.Background()),
+		server:   zmq4.NewPull(ctx),
 		peers:    make(map[string]zmq4.Socket),
+		ctx:      ctx,
+		stop:     cancel,
 	}
 	res.inner = NewPersistentGCounterWithSink(identity, filename, res)
 	return res
@@ -46,6 +51,13 @@ func (z *ZmqSingleGcounter) Start() error {
 		go z.receiveLoop()
 	})
 	return err
+}
+
+func (z *ZmqSingleGcounter) Stop() {
+	z.stop()
+	phony.Block(z, func() {
+		z.server.Close()
+	})
 }
 
 func (z *ZmqSingleGcounter) UpdatePeers(peers []string) {
@@ -110,7 +122,16 @@ func (c *ZmqSingleGcounter) PersistSync() {
 }
 
 func (z *ZmqSingleGcounter) receiveLoop() {
+	log.Printf("started listening to incoming messages at %s", z.bindAddr)
 	for {
+		select {
+		case <-z.ctx.Done():
+			log.Printf("stopped listening to incoming messages at %s", z.bindAddr)
+			z.started = false
+			return
+		default:
+		}
+
 		msg, err := z.server.Recv()
 		if err != nil {
 			log.Printf("failed receive: %v", err)

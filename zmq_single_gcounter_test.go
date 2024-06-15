@@ -11,6 +11,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		f1 := newTempFilename(t)
 		f2 := newTempFilename(t)
 		c1 := NewZmqSingleGcounter("1", f1, "tcp://:5001")
+		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		// no repeated starts
 		assert.Error(t, c1.Start())
@@ -18,6 +19,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		waitForGcounterValueOf(t, 1, c1)
 
 		c2 := NewZmqSingleGcounter("2", f2, "tcp://:5002")
+		defer c2.Stop()
 		assert.NoError(t, c2.Start())
 
 		// upon c1 discovering a new peer, c2 should merge from c1
@@ -34,6 +36,19 @@ func TestZmqSingleGcounter(t *testing.T) {
 
 		// wait for persistence before deletion
 		c1.PersistSync()
+		c2.PersistSync()
+	})
+
+	t.Run("stopping the server", func(t *testing.T) {
+		f := newTempFilename(t)
+		c1 := NewZmqSingleGcounter("1", f, "tcp://:5001")
+		assert.NoError(t, c1.Start())
+		c1.PersistSync()
+		c1.Stop()
+
+		c2 := NewZmqSingleGcounter("1", f, "tcp://:5001")
+		defer c2.Stop()
+		assert.NoError(t, c2.Start())
 		c2.PersistSync()
 	})
 }
