@@ -7,11 +7,24 @@ import (
 type AsyncGCounter struct {
 	phony.Inbox
 	inner *GCounter
+	sink  GCounterStateSink
 }
 
 func NewAsyncGCounter(identity string) *AsyncGCounter {
+	return NewAsyncGCounterWithSink(identity, &noOpGcounterState{})
+}
+
+func NewAsyncGCounterWithSink(identity string, sink GCounterStateSink) *AsyncGCounter {
 	return &AsyncGCounter{
 		inner: NewGCounter(identity),
+		sink:  sink,
+	}
+}
+
+func NewAsyncGCounterWithSinkFromState(identity string, state GCounterState, sink GCounterStateSink) *AsyncGCounter {
+	return &AsyncGCounter{
+		inner: NewGCounterFromState(identity, state),
+		sink:  sink,
 	}
 }
 
