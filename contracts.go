@@ -8,8 +8,17 @@ type GCounterStateSink interface {
 	SetState(s GCounterState)
 }
 
+type QueryableCounter interface {
+	Incrementable
+	ValueSource
+}
+
 type ValueSource interface {
 	Value() int64
+}
+
+type Incrementable interface {
+	Increment()
 }
 
 type noOpGcounterState struct{}
