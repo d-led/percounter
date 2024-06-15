@@ -10,10 +10,11 @@ import (
 
 type PersistentGCounter struct {
 	phony.Inbox
-	filename string
-	inner    *GCounter
-	sink     GCounterStateSink
-	observer CounterObserver
+	filename          string
+	inner             *GCounter
+	sink              GCounterStateSink
+	observer          CounterObserver
+	lastObservedCount int64
 }
 
 func NewPersistentGCounter(identity, filename string) *PersistentGCounter {
@@ -21,17 +22,32 @@ func NewPersistentGCounter(identity, filename string) *PersistentGCounter {
 }
 
 func NewPersistentGCounterWithSink(identity, filename string, sink GCounterStateSink) *PersistentGCounter {
-	return &PersistentGCounter{
+	res := &PersistentGCounter{
 		inner:    NewGCounterFromState(identity, getStateFrom(filename)),
 		filename: filename,
 		sink:     sink,
 		observer: &noOpCounterObserver{},
 	}
+	res.lastObservedCount = res.inner.Value()
+	return res
+}
+
+func NewPersistentGCounterWithSinkAndObserver(identity, filename string, sink GCounterStateSink, observer CounterObserver) *PersistentGCounter {
+	res := &PersistentGCounter{
+		inner:    NewGCounterFromState(identity, getStateFrom(filename)),
+		filename: filename,
+		sink:     sink,
+		observer: observer,
+	}
+	res.lastObservedCount = res.inner.Value()
+	observer.OnNewCount(res.inner.Value())
+	return res
 }
 
 func (c *PersistentGCounter) Increment() {
 	c.Act(c, func() {
 		c.inner.Increment()
+		c.publishCountIfChanged()
 		c.sink.SetState(c.inner.GetState())
 		c.persist()
 	})
@@ -56,6 +72,7 @@ func (c *PersistentGCounter) GetState() GCounterState {
 func (c *PersistentGCounter) MergeWith(other GCounterStateSource) {
 	c.Act(c, func() {
 		c.inner.MergeWith(other)
+		c.publishCountIfChanged()
 		c.persist()
 	})
 }
@@ -69,6 +86,16 @@ func (c *PersistentGCounter) PersistSync() {
 func (c *PersistentGCounter) persist() {
 	c.Act(c, func() {
 		c.persistSync()
+	})
+}
+
+func (c *PersistentGCounter) publishCountIfChanged() {
+	c.Act(c, func() {
+		newCount := c.inner.Value()
+		if newCount != c.lastObservedCount {
+			go c.observer.OnNewCount(newCount)
+			c.lastObservedCount = newCount
+		}
 	})
 }
 
