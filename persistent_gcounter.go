@@ -49,19 +49,29 @@ func (c *PersistentGCounter) MergeWith(other *PersistentGCounter) {
 	})
 }
 
+func (c *PersistentGCounter) PersistSync() {
+	phony.Block(c, func() {
+		c.persistSync()
+	})
+}
+
 func (c *PersistentGCounter) persist() {
 	c.Act(c, func() {
-		b, err := json.Marshal(c.inner.state)
-		if err != nil {
-			// something is not right with the setup
-			panic(err)
-		}
-		err = os.WriteFile(c.filename, b, 0644)
-		if err != nil {
-			// something is not right with the setup
-			panic(err)
-		}
+		c.persistSync()
 	})
+}
+
+func (c *PersistentGCounter) persistSync() {
+	b, err := json.Marshal(c.inner.state)
+	if err != nil {
+		// something is not right with the setup
+		panic(err)
+	}
+	err = os.WriteFile(c.filename, b, 0644)
+	if err != nil {
+		// something is not right with the setup
+		panic(err)
+	}
 }
 
 func getStateFrom(filename string) GCounterState {
