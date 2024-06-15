@@ -31,3 +31,11 @@ func newTempFilename(t *testing.T) string {
 	t.Cleanup(func() { _ = os.Remove(fn) })
 	return fn
 }
+
+type testGCounterStateSink struct {
+	lastState GCounterState
+}
+
+func (sink *testGCounterStateSink) SetState(s GCounterState) {
+	sink.lastState = s
+}

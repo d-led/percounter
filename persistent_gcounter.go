@@ -30,6 +30,7 @@ func NewPersistentGCounterWithSink(identity, filename string, sink GCounterState
 func (c *PersistentGCounter) Increment() {
 	c.Act(c, func() {
 		c.inner.Increment()
+		c.sink.SetState(c.inner.GetState())
 		c.persist()
 	})
 }

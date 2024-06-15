@@ -2,6 +2,8 @@ package percounter
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPersistentGCounter(t *testing.T) {
@@ -52,5 +54,19 @@ func TestPersistentGCounter(t *testing.T) {
 
 		waitForGcounterValueOf(t, 3, c)
 		c.PersistSync()
+	})
+
+	t.Run("observing state change", func(t *testing.T) {
+		filename := newTempFilename(t)
+		testsink := &testGCounterStateSink{}
+		c := NewPersistentGCounterWithSink("1", filename, testsink)
+		c.Increment()
+		waitForGcounterValueOf(t, 1, c)
+		assert.Equal(t, int64(1), testsink.lastState.Peers["1"])
+
+		c.Increment()
+		c.Increment()
+		waitForGcounterValueOf(t, 3, c)
+		assert.Equal(t, int64(3), testsink.lastState.Peers["1"])
 	})
 }
