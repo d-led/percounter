@@ -41,3 +41,9 @@ func (c *AsyncGCounter) Value() int64 {
 	})
 	return val
 }
+
+func (c *AsyncGCounter) MergeWith(other *AsyncGCounter) {
+	c.Act(c, func() {
+		c.inner.MergeWith(other.inner)
+	})
+}

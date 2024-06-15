@@ -17,6 +17,16 @@ func TestAsyncGCounter(t *testing.T) {
 		assert.Equal(t, int64(3), c.Value())
 	})
 
+	t.Run("merging with another counter", func(t *testing.T) {
+		c := NewAsyncGCounter("1")
+		c.Increment()
+		c.Increment()
+		c2 := NewAsyncGCounter("2")
+		c2.Increment()
+		c.MergeWith(c2)
+		assert.Equal(t, int64(3), c.Value())
+	})
+
 	t.Run("eventual consistency in-process", func(t *testing.T) {
 		c := NewAsyncGCounter("1")
 		const goroutineCount = 32
