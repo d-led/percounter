@@ -10,7 +10,8 @@ func TestZmqSingleGcounter(t *testing.T) {
 	t.Run("exchanging state changes", func(t *testing.T) {
 		f1 := newTempFilename(t)
 		f2 := newTempFilename(t)
-		c1 := NewZmqSingleGcounter("1", f1, "tcp://:5001")
+		testObserver := newTestCounterObserver()
+		c1 := NewObservableZmqSingleGcounter("1", f1, "tcp://:5001", testObserver)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		// no repeated starts
@@ -26,6 +27,9 @@ func TestZmqSingleGcounter(t *testing.T) {
 		c1.UpdatePeers([]string{"tcp://localhost:5002"})
 		waitForGcounterValueOf(t, 1, c2)
 
+		// until now, only the first 2 values should have been observed
+		assert.Equal(t, []int64{0, 1}, testObserver.valuesSeen)
+
 		// bidirectional connection
 		c2.UpdatePeers([]string{"tcp://localhost:5001"})
 		waitForGcounterValueOf(t, 1, c1)
@@ -37,6 +41,9 @@ func TestZmqSingleGcounter(t *testing.T) {
 		// wait for persistence before deletion
 		c1.PersistSync()
 		c2.PersistSync()
+
+		// now all should have been observed
+		assert.Equal(t, []int64{0, 1, 2}, testObserver.valuesSeen)
 	})
 
 	t.Run("stopping the server", func(t *testing.T) {

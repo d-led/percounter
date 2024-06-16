@@ -23,6 +23,19 @@ type ZmqSingleGcounter struct {
 	stop     context.CancelFunc
 }
 
+func NewObservableZmqSingleGcounter(identity, filename, bindAddr string, observer CounterObserver) *ZmqSingleGcounter {
+	ctx, cancel := context.WithCancel(context.Background())
+	res := &ZmqSingleGcounter{
+		bindAddr: bindAddr,
+		server:   zmq4.NewPull(ctx),
+		peers:    make(map[string]zmq4.Socket),
+		ctx:      ctx,
+		stop:     cancel,
+	}
+	res.inner = NewPersistentGCounterWithSinkAndObserver(identity, filename, res, observer)
+	return res
+}
+
 func NewZmqSingleGcounter(identity, filename, bindAddr string) *ZmqSingleGcounter {
 	ctx, cancel := context.WithCancel(context.Background())
 	res := &ZmqSingleGcounter{
