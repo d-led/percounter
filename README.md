@@ -8,3 +8,5 @@ see tests for usage:
 - [async in-process](async_gcounter_test.go)
 - [async in-process, persistent](async_gcounter_test.go)
 - [async distributed (ZeroMQ via tcp), persistent](zmq_single_gcounter_test.go)
+
+initially created to be used in [mermaidlive](https://github.com/d-led/mermaidlive)
