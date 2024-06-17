@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestZmqSingleGcounter(t *testing.T) {
@@ -28,7 +29,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		waitForGcounterValueOf(t, 1, c2)
 
 		// until now, only the first 2 values should have been observed
-		assert.Equal(t, []int64{0, 1}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1}, testObserver.valuesSeen)
 
 		// bidirectional connection
 		c2.UpdatePeers([]string{"tcp://localhost:5001"})
@@ -43,7 +44,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		c2.PersistSync()
 
 		// now all should have been observed
-		assert.Equal(t, []int64{0, 1, 2}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.valuesSeen)
 	})
 
 	t.Run("stopping the server", func(t *testing.T) {
@@ -58,4 +59,11 @@ func TestZmqSingleGcounter(t *testing.T) {
 		assert.NoError(t, c2.Start())
 		c2.PersistSync()
 	})
+}
+
+func assertValuesSeen(t *testing.T, expected []int64, events []CountEvent) {
+	require.Len(t, events, len(expected))
+	for pos, e := range expected {
+		assert.Equal(t, e, events[pos].Count)
+	}
 }

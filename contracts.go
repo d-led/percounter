@@ -17,8 +17,13 @@ type ValueSource interface {
 	Value() int64
 }
 
+type CountEvent struct {
+	Name  string
+	Count int64
+}
+
 type CounterObserver interface {
-	OnNewCount(count int64)
+	OnNewCount(ev CountEvent)
 }
 
 type Incrementable interface {
@@ -32,4 +37,4 @@ func (n *noOpGcounterState) SetState(s GCounterState) {}
 
 type noOpCounterObserver struct{}
 
-func (n *noOpCounterObserver) OnNewCount(int64) {}
+func (n *noOpCounterObserver) OnNewCount(CountEvent) {}

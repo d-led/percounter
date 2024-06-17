@@ -41,15 +41,15 @@ func (sink *testGCounterStateSink) SetState(s GCounterState) {
 }
 
 type testCounterObserver struct {
-	valuesSeen []int64
+	valuesSeen []CountEvent
 }
 
 func newTestCounterObserver() *testCounterObserver {
 	return &testCounterObserver{
-		valuesSeen: []int64{},
+		valuesSeen: []CountEvent{},
 	}
 }
 
-func (o *testCounterObserver) OnNewCount(c int64) {
+func (o *testCounterObserver) OnNewCount(c CountEvent) {
 	o.valuesSeen = append(o.valuesSeen, c)
 }

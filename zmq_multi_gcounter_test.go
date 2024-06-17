@@ -34,7 +34,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 		waitForMultiGcounterValueOf(t, 1, c2, key1)
 
 		// until now, only the first 2 values should have been observed
-		assert.Equal(t, []int64{0, 1}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1}, testObserver.valuesSeen)
 
 		// bidirectional connection
 		c2.UpdatePeers([]string{"tcp://localhost:5001"})
@@ -49,7 +49,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c2.PersistSync()
 
 		// now all should have been observed
-		assert.Equal(t, []int64{0, 1, 2}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.valuesSeen)
 	})
 
 	t.Run("stopping the server", func(t *testing.T) {
