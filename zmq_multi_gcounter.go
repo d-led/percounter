@@ -106,9 +106,9 @@ func (z *ZmqMultiGcounter) UpdatePeers(peers []string) {
 	})
 }
 
-func (z *ZmqMultiGcounter) Increment(key string) {
+func (z *ZmqMultiGcounter) Increment(name string) {
 	z.Act(z, func() {
-		counter := z.getOrCreateCounterSync(key)
+		counter := z.getOrCreateCounterSync(name)
 		counter.Increment()
 	})
 }
@@ -127,19 +127,19 @@ func (c *ZmqMultiGcounter) MergeWith(other GCounterStateSource) {
 	})
 }
 
-func (c *ZmqMultiGcounter) Value(key string) int64 {
+func (c *ZmqMultiGcounter) Value(name string) int64 {
 	var val int64
 	phony.Block(c, func() {
-		counter := c.getOrCreateCounterSync(key)
+		counter := c.getOrCreateCounterSync(name)
 		val = counter.Value()
 	})
 	return val
 }
 
-func (c *ZmqMultiGcounter) GetCounter(key string) *PersistentGCounter {
+func (c *ZmqMultiGcounter) GetCounter(name string) *PersistentGCounter {
 	var res *PersistentGCounter
 	phony.Block(c, func() {
-		res = c.getOrCreateCounterSync(key)
+		res = c.getOrCreateCounterSync(name)
 	})
 	return res
 }
@@ -150,22 +150,22 @@ func (c *ZmqMultiGcounter) PersistSync() {
 	}
 }
 
-func (c *ZmqMultiGcounter) PersistOneSync(key string) {
+func (c *ZmqMultiGcounter) PersistOneSync(name string) {
 	phony.Block(c, func() {
-		counter := c.getOrCreateCounterSync(key)
+		counter := c.getOrCreateCounterSync(name)
 		counter.PersistSync()
 	})
 }
 
-func (z *ZmqMultiGcounter) getOrCreateCounterSync(key string) *PersistentGCounter {
-	if counter, ok := z.inner[key]; ok {
+func (z *ZmqMultiGcounter) getOrCreateCounterSync(name string) *PersistentGCounter {
+	if counter, ok := z.inner[name]; ok {
 		return counter
 	}
 
-	counter := NewPersistentGCounterWithSinkAndObserver(z.identity, z.multiCounterFilenameFor(key), z, z.observer)
-	counter.inner.state.Name = key
+	counter := NewPersistentGCounterWithSinkAndObserver(z.identity, z.multiCounterFilenameFor(name), z, z.observer)
+	counter.inner.state.Name = name
 	// to do: improve construction
-	z.inner[key] = counter
+	z.inner[name] = counter
 	return counter
 }
 
@@ -221,8 +221,8 @@ func (z *ZmqMultiGcounter) sendMyStateToPeerSync(peer string) {
 	}
 }
 
-func (z *ZmqMultiGcounter) multiCounterFilenameFor(key string) string {
-	return path.Join(z.dirname, key+".gcounter")
+func (z *ZmqMultiGcounter) multiCounterFilenameFor(name string) string {
+	return path.Join(z.dirname, name+".gcounter")
 }
 
 func nameOrSingleton(name string) string {
