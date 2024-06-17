@@ -29,7 +29,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		waitForGcounterValueOf(t, 1, c2)
 
 		// until now, only the first 2 values should have been observed
-		assertValuesSeen(t, []int64{0, 1}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1}, testObserver.GtValuesSeen())
 
 		// bidirectional connection
 		c2.UpdatePeers([]string{"tcp://localhost:5001"})
@@ -44,7 +44,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 		c2.PersistSync()
 
 		// now all should have been observed
-		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.GtValuesSeen())
 	})
 
 	t.Run("stopping the server", func(t *testing.T) {

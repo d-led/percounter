@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Arceliar/phony"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,6 +42,7 @@ func (sink *testGCounterStateSink) SetState(s GCounterState) {
 }
 
 type testCounterObserver struct {
+	phony.Inbox
 	valuesSeen []CountEvent
 }
 
@@ -51,5 +53,15 @@ func newTestCounterObserver() *testCounterObserver {
 }
 
 func (o *testCounterObserver) OnNewCount(c CountEvent) {
-	o.valuesSeen = append(o.valuesSeen, c)
+	o.Act(o, func() {
+		o.valuesSeen = append(o.valuesSeen, c)
+	})
+}
+
+func (o *testCounterObserver) GtValuesSeen() []CountEvent {
+	var res []CountEvent
+	phony.Block(o, func() {
+		res = append(res, o.valuesSeen...)
+	})
+	return res
 }

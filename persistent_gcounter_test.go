@@ -82,15 +82,15 @@ func TestPersistentGCounter(t *testing.T) {
 
 		// let some goroutines run
 		time.Sleep(10 * time.Millisecond)
-		assertValuesSeen(t, []int64{0, 1}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1}, testObserver.GtValuesSeen())
 
 		c.MergeWith(NewGCounterFromState("2", GCounterState{Peers: map[string]int64{"1": 1}}))
 		time.Sleep(10 * time.Millisecond)
-		assertValuesSeen(t, []int64{0, 1}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1}, testObserver.GtValuesSeen())
 
 		c.MergeWith(NewGCounterFromState("2", GCounterState{Peers: map[string]int64{"2": 1}}))
 		time.Sleep(10 * time.Millisecond)
-		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.valuesSeen)
+		assertValuesSeen(t, []int64{0, 1, 2}, testObserver.GtValuesSeen())
 
 		c.PersistSync()
 	})

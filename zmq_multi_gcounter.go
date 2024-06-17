@@ -137,7 +137,11 @@ func (c *ZmqMultiGcounter) Value(key string) int64 {
 }
 
 func (c *ZmqMultiGcounter) GetCounter(key string) *PersistentGCounter {
-	return c.getOrCreateCounterSync(key)
+	var res *PersistentGCounter
+	phony.Block(c, func() {
+		res = c.getOrCreateCounterSync(key)
+	})
+	return res
 }
 
 func (c *ZmqMultiGcounter) PersistSync() {
