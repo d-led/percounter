@@ -84,11 +84,11 @@ func TestPersistentGCounter(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		assert.Equal(t, []int64{0, 1}, testObserver.valuesSeen)
 
-		c.MergeWith(NewGCounterFromState("2", GCounterState{map[string]int64{"1": 1}}))
+		c.MergeWith(NewGCounterFromState("2", GCounterState{Peers: map[string]int64{"1": 1}}))
 		time.Sleep(10 * time.Millisecond)
 		assert.Equal(t, []int64{0, 1}, testObserver.valuesSeen)
 
-		c.MergeWith(NewGCounterFromState("2", GCounterState{map[string]int64{"2": 1}}))
+		c.MergeWith(NewGCounterFromState("2", GCounterState{Peers: map[string]int64{"2": 1}}))
 		time.Sleep(10 * time.Millisecond)
 		assert.Equal(t, []int64{0, 1, 2}, testObserver.valuesSeen)
 

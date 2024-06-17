@@ -1,6 +1,7 @@
 package percounter
 
 type GCounterState struct {
+	Name  string           `json:"name"`
 	Peers map[string]int64 `json:"peers"`
 }
 
