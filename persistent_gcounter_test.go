@@ -94,4 +94,29 @@ func TestPersistentGCounter(t *testing.T) {
 
 		c.PersistSync()
 	})
+
+	t.Run("restoring a file sets the name of the counter", func(t *testing.T) {
+		filename := newTempFilename(t)
+		s := getStateFrom(filename)
+		assert.NotEmpty(t, s.Name)
+		assert.Contains(t, filename, s.Name)
+		assert.Equal(t, getFilenameWithoutExtension(filename), s.Name)
+	})
+
+	t.Run("existing name is not overwritten upon load", func(t *testing.T) {
+		filename := newTempFilename(t)
+
+		// prepare a counter
+		c := NewPersistentGCounter("1", filename)
+
+		// change its name and persist
+		c.inner.state.Name = "new-name"
+		c.Increment()
+		waitForGcounterValueOf(t, 1, c)
+		c.PersistSync()
+
+		// the existing name is preserved
+		s := getStateFrom(filename)
+		assert.Equal(t, "new-name", s.Name)
+	})
 }

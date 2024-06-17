@@ -6,7 +6,12 @@ type GCounterState struct {
 }
 
 func NewGcounterState() GCounterState {
+	return NewNamedGcounterState("singleton")
+}
+
+func NewNamedGcounterState(name string) GCounterState {
 	return GCounterState{
+		Name:  name,
 		Peers: make(map[string]int64),
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/Arceliar/phony"
 )
@@ -113,16 +115,25 @@ func (c *PersistentGCounter) persistSync() {
 }
 
 func getStateFrom(filename string) GCounterState {
+	counterName := getFilenameWithoutExtension(filename)
 	contents, err := os.ReadFile(filename)
 	if err != nil || len(contents) == 0 {
 		log.Printf("error reading %s: %v", filename, err)
-		return NewGcounterState()
+		return NewNamedGcounterState(counterName)
 	}
 	var res GCounterState
 	err = json.Unmarshal(contents, &res)
 	if err != nil {
 		log.Printf("error deserializing state from %s: %v", filename, err)
-		return NewGcounterState()
+		return NewNamedGcounterState(counterName)
+	}
+	if res.Name == "" {
+		res.Name = counterName
 	}
 	return res
+}
+
+func getFilenameWithoutExtension(filename string) string {
+	withoutDir := path.Base(filename)
+	return strings.TrimSuffix(withoutDir, path.Ext(withoutDir))
 }
