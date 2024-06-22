@@ -144,7 +144,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c.PersistSync()
 	})
 
-	t.Run("!!!do not do this yet!!! re-using an existing cluster but the named counters are not synced", func(t *testing.T) {
+	t.Run("re-using an existing cluster but the named counters are not synced", func(t *testing.T) {
 		port1 := randomPort()
 		c := NewZmqCluster("1", "tcp://:"+port1)
 		t.Cleanup(c.Stop)
@@ -155,6 +155,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 		assert.NoError(t, c1.Start())
 
 		tempDir2 := t.TempDir()
+		t.Log("!!!do not do this yet!!! do not share the cluster for two ZmqMultiGcounter")
 		c2 := NewZmqMultiGcounterInCluster("2", tempDir2, c)
 		assert.NoError(t, c2.Start())
 
