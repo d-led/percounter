@@ -1,7 +1,9 @@
 package percounter
 
 import (
+	"fmt"
 	"log"
+	"math/rand/v2"
 	"os"
 	"testing"
 	"time"
@@ -64,4 +66,22 @@ func (o *testCounterObserver) GtValuesSeen() []CountEvent {
 		res = append(res, o.valuesSeen...)
 	})
 	return res
+}
+
+func (o *testCounterObserver) WaitForGtValuesSeen(t *testing.T, expectedCount int) []CountEvent {
+	for w := 0; w < 15; w++ {
+		if expectedCount == len(o.GtValuesSeen()) {
+			// all ok
+			return o.GtValuesSeen()
+		}
+		log.Printf("waiting for the event count to arrive at the expected value of %d ...", expectedCount)
+		time.Sleep(100 * time.Millisecond)
+	}
+	res := o.GtValuesSeen()
+	assert.Equal(t, expectedCount, len(res))
+	return res
+}
+
+func randomPort() string {
+	return fmt.Sprint(5000 + rand.Int32N(2000))
 }

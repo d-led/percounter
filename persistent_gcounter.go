@@ -47,7 +47,11 @@ func NewPersistentGCounterWithSinkAndObserver(identity, filename string, sink GC
 }
 
 func (c *PersistentGCounter) Increment() {
-	c.Act(c, func() {
+	c.IncrementFromActor(c)
+}
+
+func (c *PersistentGCounter) IncrementFromActor(anotherActor phony.Actor) {
+	c.Act(anotherActor, func() {
 		c.inner.Increment()
 		c.publishCountIfChangedSync()
 		c.sink.SetState(c.inner.GetState())

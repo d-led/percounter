@@ -56,7 +56,7 @@ func (z *ZmqMultiGcounter) Start() error {
 	var err error
 	phony.Block(z, func() {
 		if z.started {
-			err = errors.New("already started")
+			err = errors.New(z.identity + " already started")
 		}
 		err = z.server.Listen(z.bindAddr)
 		if err != nil {
@@ -70,8 +70,9 @@ func (z *ZmqMultiGcounter) Start() error {
 }
 
 func (z *ZmqMultiGcounter) Stop() {
-	z.stop()
+	// z.stop()
 	phony.Block(z, func() {
+		log.Println("disconnecting", z.identity)
 		z.server.Close()
 	})
 }
@@ -93,10 +94,10 @@ func (z *ZmqMultiGcounter) UpdatePeers(peers []string) {
 		for _, peer := range peers {
 			if _, ok := z.peers[peer]; !ok {
 				socket := zmq4.NewPush(context.Background())
-				log.Println("Connecting to", peer)
+				log.Println(z.identity+": connecting to", peer)
 				err := socket.Dial(peer)
 				if err != nil {
-					log.Printf("Could not connect to peer: %s: %v", peer, err)
+					log.Printf(z.identity+": could not connect to peer: %s: %v", peer, err)
 					continue
 				}
 				z.peers[peer] = socket
@@ -109,7 +110,7 @@ func (z *ZmqMultiGcounter) UpdatePeers(peers []string) {
 func (z *ZmqMultiGcounter) Increment(name string) {
 	z.Act(z, func() {
 		counter := z.getOrCreateCounterSync(name)
-		counter.Increment()
+		counter.IncrementFromActor(z)
 	})
 }
 
@@ -170,11 +171,11 @@ func (z *ZmqMultiGcounter) getOrCreateCounterSync(name string) *PersistentGCount
 }
 
 func (z *ZmqMultiGcounter) receiveLoop() {
-	log.Printf("started listening to incoming messages at %s", z.bindAddr)
+	log.Printf(z.identity+": started listening to incoming messages at %s", z.bindAddr)
 	for {
 		select {
 		case <-z.ctx.Done():
-			log.Printf("stopped listening to incoming messages at %s", z.bindAddr)
+			log.Printf("%s: stopped listening to incoming messages at %s", z.identity, z.bindAddr)
 			z.started = false
 			return
 		default:
@@ -182,14 +183,18 @@ func (z *ZmqMultiGcounter) receiveLoop() {
 
 		msg, err := z.server.Recv()
 		if err != nil {
-			log.Printf("failed receive: %v", err)
-			go z.receiveLater()
+			log.Printf("%s: failed receive: %v", z.identity, err)
+			if !errors.Is(err, context.Canceled) {
+				go z.receiveLater()
+			} else {
+				log.Printf("%s: stopping receive loop", z.identity)
+			}
 			return
 		}
 		state := GCounterState{}
 		err = json.Unmarshal(msg.Bytes(), &state)
 		if err != nil {
-			log.Printf("failed to deserialize state: %v", err)
+			log.Printf("%s: failed to deserialize state: %v", z.identity, err)
 			go z.receiveLater()
 			return
 		}
@@ -211,7 +216,7 @@ func (z *ZmqMultiGcounter) propagateStateSync(s GCounterState) {
 func (z *ZmqMultiGcounter) sendMyStateToPeerSync(peer string) {
 	client, ok := z.peers[peer]
 	if !ok {
-		log.Printf("client not found for peer %s", peer)
+		log.Printf("%s: client not found for peer %s", z.identity, peer)
 		return
 	}
 

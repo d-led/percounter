@@ -16,8 +16,10 @@ func TestZmqMultiGcounter(t *testing.T) {
 	t.Run("exchanging state changes", func(t *testing.T) {
 		tempDir1 := t.TempDir()
 		tempDir2 := t.TempDir()
+		port1 := randomPort()
+		port2 := randomPort()
 		testObserver := newTestCounterObserver()
-		c1 := NewObservableZmqMultiGcounter("1", tempDir1, "tcp://:5001", testObserver)
+		c1 := NewObservableZmqMultiGcounter("1", tempDir1, "tcp://:"+port1, testObserver)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		// no repeated starts
@@ -25,12 +27,12 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c1.Increment(name1)
 		waitForMultiGcounterValueOf(t, 1, c1, name1)
 
-		c2 := NewZmqMultiGcounter("2", tempDir2, "tcp://:5002")
+		c2 := NewZmqMultiGcounter("2", tempDir2, "tcp://:"+port2)
 		defer c2.Stop()
 		assert.NoError(t, c2.Start())
 
 		// upon c1 discovering a new peer, c2 should merge from c1
-		c1.UpdatePeers([]string{"tcp://localhost:5002"})
+		c1.UpdatePeers([]string{"tcp://localhost:" + port2})
 		waitForMultiGcounterValueOf(t, 1, c2, name1)
 
 		// until now, only the first 2 values should have been observed
@@ -40,8 +42,9 @@ func TestZmqMultiGcounter(t *testing.T) {
 		}, testObserver.GtValuesSeen())
 
 		// bidirectional connection
-		c2.UpdatePeers([]string{"tcp://localhost:5001"})
+		c2.UpdatePeers([]string{"tcp://localhost:" + port1})
 		waitForMultiGcounterValueOf(t, 1, c1, name1)
+		waitForMultiGcounterValueOf(t, 1, c2, name1)
 
 		// incrementing c2 should cause c1 to converge on the same value
 		c2.Increment(name1)
@@ -61,23 +64,26 @@ func TestZmqMultiGcounter(t *testing.T) {
 
 	t.Run("stopping the server", func(t *testing.T) {
 		tempDir := t.TempDir()
+		port1 := randomPort()
 
-		c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:5001")
+		c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:"+port1)
 		assert.NoError(t, c1.Start())
 		c1.PersistSync()
 		c1.Stop()
 
-		c2 := NewZmqMultiGcounter("1", tempDir, "tcp://:5001")
+		c2 := NewZmqMultiGcounter("1", tempDir, "tcp://:"+port1)
 		defer c2.Stop()
 		assert.NoError(t, c2.Start())
 		c2.PersistSync()
 	})
 
 	t.Run("creating the directory if it doesn't exist", func(t *testing.T) {
+		port1 := randomPort()
+
 		dir := "test-dir/counters"
 		defer os.RemoveAll("test-dir")
 
-		c1 := NewZmqMultiGcounter("1", dir, "tcp://:5001")
+		c1 := NewZmqMultiGcounter("1", dir, "tcp://:"+port1)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		c1.Increment(name1)
@@ -89,9 +95,11 @@ func TestZmqMultiGcounter(t *testing.T) {
 	})
 
 	t.Run("reopening the files", func(t *testing.T) {
+		port1 := randomPort()
+
 		tempDir := t.TempDir()
 		{
-			c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:5001")
+			c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:"+port1)
 			assert.NoError(t, c1.Start())
 			c1.Increment(name1)
 			c1.Increment(name1)
@@ -102,7 +110,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 			c1.Stop()
 		}
 
-		c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:5001")
+		c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:"+port1)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		c1.Increment(name2)
@@ -112,9 +120,10 @@ func TestZmqMultiGcounter(t *testing.T) {
 	})
 
 	t.Run("multiple counters", func(t *testing.T) {
+		port1 := randomPort()
 		tempDir := t.TempDir()
 		testObserver := newTestCounterObserver()
-		c := NewObservableZmqMultiGcounter("1", tempDir, "tcp://:5001", testObserver)
+		c := NewObservableZmqMultiGcounter("1", tempDir, "tcp://:"+port1, testObserver)
 		defer c.Stop()
 		assert.NoError(t, c.Start())
 
@@ -130,7 +139,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 			{name1, 2},
 			{name2, 0},
 			{name2, 1},
-		}, testObserver.GtValuesSeen())
+		}, testObserver.WaitForGtValuesSeen(t, 5))
 
 		c.PersistSync()
 	})
