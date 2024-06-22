@@ -67,7 +67,7 @@ func (z *ZmqSingleGcounter) Start() error {
 }
 
 func (z *ZmqSingleGcounter) Stop() {
-	// z.stop()
+	z.stop()
 	phony.Block(z, func() {
 		log.Println("disconnecting", z.inner.inner.identity)
 		z.server.Close()
@@ -200,12 +200,4 @@ func sendStateToPeerSync(c zmq4.Socket, s GCounterState) {
 		log.Printf("%s: error sending state to peer: %v", s.Name, err)
 		return
 	}
-}
-
-func setOf(s []string) map[string]bool {
-	var res = make(map[string]bool)
-	for _, e := range s {
-		res[e] = true
-	}
-	return res
 }

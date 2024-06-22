@@ -70,7 +70,7 @@ func (z *ZmqMultiGcounter) Start() error {
 }
 
 func (z *ZmqMultiGcounter) Stop() {
-	// z.stop()
+	z.stop()
 	phony.Block(z, func() {
 		log.Println("disconnecting", z.identity)
 		z.server.Close()
