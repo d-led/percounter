@@ -49,7 +49,7 @@ func NewPersistentGCounterWithSinkAndObserver(identity, filename string, sink GC
 func (c *PersistentGCounter) Increment() {
 	c.Act(c, func() {
 		c.inner.Increment()
-		c.publishCountIfChanged()
+		c.publishCountIfChangedSync()
 		c.sink.SetState(c.inner.GetState())
 		c.persist()
 	})
@@ -91,14 +91,18 @@ func (c *PersistentGCounter) persist() {
 	})
 }
 
+func (c *PersistentGCounter) publishCountIfChangedSync() {
+	newCount := c.inner.Value()
+	if newCount != c.lastObservedCount {
+		name := c.inner.state.Name
+		c.observer.OnNewCount(CountEvent{name, newCount})
+		c.lastObservedCount = newCount
+	}
+}
+
 func (c *PersistentGCounter) publishCountIfChanged() {
 	c.Act(c, func() {
-		newCount := c.inner.Value()
-		if newCount != c.lastObservedCount {
-			name := c.inner.state.Name
-			go c.observer.OnNewCount(CountEvent{name, newCount})
-			c.lastObservedCount = newCount
-		}
+		c.publishCountIfChangedSync()
 	})
 }
 
