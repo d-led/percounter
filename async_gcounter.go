@@ -45,7 +45,7 @@ func (c *AsyncGCounter) Value() int64 {
 func (c *AsyncGCounter) GetState() GCounterState {
 	var res GCounterState
 	phony.Block(c, func() {
-		res = c.inner.GetState()
+		res = c.inner.GetState().Copy()
 	})
 	return res
 }

@@ -1,5 +1,7 @@
 package percounter
 
+import "maps"
+
 type GCounterState struct {
 	Name  string           `json:"name"`
 	Peers map[string]int64 `json:"peers"`
@@ -13,5 +15,12 @@ func NewNamedGcounterState(name string) GCounterState {
 	return GCounterState{
 		Name:  name,
 		Peers: make(map[string]int64),
+	}
+}
+
+func (s GCounterState) Copy() GCounterState {
+	return GCounterState{
+		Name:  s.Name,
+		Peers: maps.Clone(s.Peers),
 	}
 }

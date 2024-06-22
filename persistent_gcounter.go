@@ -54,7 +54,7 @@ func (c *PersistentGCounter) IncrementFromActor(anotherActor phony.Actor) {
 	c.Act(anotherActor, func() {
 		c.inner.Increment()
 		c.publishCountIfChangedSync()
-		c.sink.SetState(c.inner.GetState())
+		c.sink.SetState(c.inner.GetState().Copy())
 		c.persist()
 	})
 }
