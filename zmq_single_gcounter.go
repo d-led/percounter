@@ -5,15 +5,16 @@ import (
 	"log"
 
 	"github.com/Arceliar/phony"
+	"github.com/d-led/zmqcluster"
 )
 
 type ZmqSingleGcounter struct {
 	phony.Inbox
 	inner   *PersistentGCounter
-	cluster Cluster
+	cluster zmqcluster.Cluster
 }
 
-func NewZmqSingleGcounterInCluster(identity, filename string, cluster Cluster) *ZmqSingleGcounter {
+func NewZmqSingleGcounterInCluster(identity, filename string, cluster zmqcluster.Cluster) *ZmqSingleGcounter {
 	res := &ZmqSingleGcounter{}
 	cluster.AddListenerSync(res)
 	res.cluster = cluster
@@ -23,7 +24,7 @@ func NewZmqSingleGcounterInCluster(identity, filename string, cluster Cluster) *
 
 func NewObservableZmqSingleGcounter(identity, filename, bindAddr string, observer CounterObserver) *ZmqSingleGcounter {
 	res := &ZmqSingleGcounter{}
-	cluster := NewZmqCluster(identity, bindAddr)
+	cluster := zmqcluster.NewZmqCluster(identity, bindAddr)
 	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = NewPersistentGCounterWithSinkAndObserver(identity, filename, res, observer)
@@ -32,7 +33,7 @@ func NewObservableZmqSingleGcounter(identity, filename, bindAddr string, observe
 
 func NewZmqSingleGcounter(identity, filename, bindAddr string) *ZmqSingleGcounter {
 	res := &ZmqSingleGcounter{}
-	cluster := NewZmqCluster(identity, bindAddr)
+	cluster := zmqcluster.NewZmqCluster(identity, bindAddr)
 	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = NewPersistentGCounterWithSink(identity, filename, res)
@@ -57,7 +58,7 @@ func (z *ZmqSingleGcounter) OnMessage(message []byte) {
 	z.MergeWith(NewGCounterFromState("temporary-counter", state))
 }
 
-func (z *ZmqSingleGcounter) OnNewPeerConnected(c Cluster, peer string) {
+func (z *ZmqSingleGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string) {
 	z.sendMyStateToPeer(peer)
 }
 

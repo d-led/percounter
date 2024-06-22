@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d-led/zmqcluster"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -146,7 +147,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 
 	t.Run("re-using an existing cluster but the named counters are not synced", func(t *testing.T) {
 		port1 := randomPort()
-		c := NewZmqCluster("1", "tcp://:"+port1)
+		c := zmqcluster.NewZmqCluster("1", "tcp://:"+port1)
 		t.Cleanup(c.Stop)
 
 		tempDir1 := t.TempDir()

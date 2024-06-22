@@ -3,6 +3,7 @@ package percounter
 import (
 	"testing"
 
+	"github.com/d-led/zmqcluster"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -62,7 +63,7 @@ func TestZmqSingleGcounter(t *testing.T) {
 
 	t.Run("re-using an existing cluster", func(t *testing.T) {
 		port1 := randomPort()
-		c := NewZmqCluster("1", "tcp://:"+port1)
+		c := zmqcluster.NewZmqCluster("1", "tcp://:"+port1)
 		t.Cleanup(c.Stop)
 
 		f := newTempFilename(t)

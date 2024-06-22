@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/Arceliar/phony"
+	"github.com/d-led/zmqcluster"
 )
 
 type ZmqMultiGcounter struct {
@@ -14,11 +15,11 @@ type ZmqMultiGcounter struct {
 	dirname  string
 	identity string
 	inner    map[string]*PersistentGCounter
-	cluster  Cluster
+	cluster  zmqcluster.Cluster
 	observer CounterObserver
 }
 
-func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster Cluster, observer CounterObserver) *ZmqMultiGcounter {
+func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.Cluster, observer CounterObserver) *ZmqMultiGcounter {
 	err := os.MkdirAll(dirname, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -35,11 +36,11 @@ func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster Cl
 }
 
 func NewObservableZmqMultiGcounter(identity, dirname, bindAddr string, observer CounterObserver) *ZmqMultiGcounter {
-	cluster := NewZmqCluster(identity, bindAddr)
+	cluster := zmqcluster.NewZmqCluster(identity, bindAddr)
 	return NewObservableZmqMultiGcounterInCluster(identity, dirname, cluster, observer)
 }
 
-func NewZmqMultiGcounterInCluster(identity, dirname string, cluster Cluster) *ZmqMultiGcounter {
+func NewZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.Cluster) *ZmqMultiGcounter {
 	return NewObservableZmqMultiGcounterInCluster(identity, dirname, cluster, &noOpCounterObserver{})
 }
 
@@ -65,7 +66,7 @@ func (z *ZmqMultiGcounter) OnMessage(message []byte) {
 	z.MergeWith(NewGCounterFromState(state.Name, state))
 }
 
-func (z *ZmqMultiGcounter) OnNewPeerConnected(c Cluster, peer string) {
+func (z *ZmqMultiGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string) {
 	z.sendMyStateToPeer(peer)
 }
 
