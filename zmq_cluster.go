@@ -114,7 +114,7 @@ func (z *ZmqCluster) UpdatePeers(peers []string) {
 func (z *ZmqCluster) BroadcastMessage(message []byte) {
 	z.Act(z, func() {
 		if len(z.peers) == 0 {
-			log.Printf("%s: no peers in cluster of '%s', ignoring message", z.myIdentity, z.myIdentity)
+			log.Printf("%s: no peers in cluster, ignoring message", z.myIdentity)
 			return
 		}
 
