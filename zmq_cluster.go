@@ -22,6 +22,8 @@ type Cluster interface {
 	BroadcastMessage(message []byte)
 	Start() error
 	Stop()
+	AddListenerSync(listener ClusterListener)
+	AddListener(listener ClusterListener)
 }
 
 type ZmqCluster struct {
@@ -56,7 +58,8 @@ func (z *ZmqCluster) Start() error {
 	var err error
 	phony.Block(z, func() {
 		if z.started {
-			err = errors.New("already started")
+			log.Printf("%s: already started", z.myIdentity)
+			return
 		}
 		err = z.server.Listen(z.bindAddr)
 		if err != nil {

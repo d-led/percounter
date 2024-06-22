@@ -15,8 +15,8 @@ func TestZmqSingleGcounter(t *testing.T) {
 		c1 := NewObservableZmqSingleGcounter("1", f1, "tcp://:5001", testObserver)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
-		// no repeated starts
-		assert.Error(t, c1.Start())
+		// starts are idempotent
+		assert.NoError(t, c1.Start())
 		c1.Increment()
 		waitForGcounterValueOf(t, 1, c1)
 
@@ -57,6 +57,30 @@ func TestZmqSingleGcounter(t *testing.T) {
 		c2 := NewZmqSingleGcounter("1", f, "tcp://:5001")
 		defer c2.Stop()
 		assert.NoError(t, c2.Start())
+		c2.PersistSync()
+	})
+
+	t.Run("re-using an existing cluster", func(t *testing.T) {
+		port1 := randomPort()
+		c := NewZmqCluster("1", "tcp://:"+port1)
+		t.Cleanup(c.Stop)
+
+		f := newTempFilename(t)
+		c1 := NewZmqSingleGcounterInCluster("1", f, c)
+		c.AddListenerSync(c1)
+		assert.NoError(t, c1.Start())
+
+		c2 := NewZmqSingleGcounterInCluster("2", f, c)
+		assert.NoError(t, c2.Start())
+
+		c1.Increment()
+		c2.Increment()
+		c2.Increment()
+
+		waitForGcounterValueOf(t, 2, c2)
+		waitForGcounterValueOf(t, 1, c1)
+
+		c1.PersistSync()
 		c2.PersistSync()
 	})
 }

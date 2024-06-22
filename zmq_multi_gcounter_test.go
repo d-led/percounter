@@ -22,8 +22,8 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c1 := NewObservableZmqMultiGcounter("1", tempDir1, "tcp://:"+port1, testObserver)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
-		// no repeated starts
-		assert.Error(t, c1.Start())
+		// no starts are idempotent
+		assert.NoError(t, c1.Start())
 		c1.Increment(name1)
 		waitForMultiGcounterValueOf(t, 1, c1, name1)
 
