@@ -2,9 +2,11 @@ package percounter
 
 import (
 	"encoding/json"
+	"io/fs"
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/Arceliar/phony"
 	"github.com/d-led/zmqcluster"
@@ -46,6 +48,25 @@ func NewZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.C
 
 func NewZmqMultiGcounter(identity, dirname, bindAddr string) *ZmqMultiGcounter {
 	return NewObservableZmqMultiGcounter(identity, dirname, bindAddr, &noOpCounterObserver{})
+}
+
+func (z *ZmqMultiGcounter) LoadAllSync() error {
+	var err error
+	phony.Block(z, func() {
+		var files []fs.DirEntry
+		files, err = os.ReadDir(z.dirname)
+		if err != nil {
+			return
+		}
+		for _, f := range files {
+			counterName, ok := getCounterName(f.Name())
+			if !ok {
+				continue
+			}
+			_ = z.getOrCreateCounterSync(counterName)
+		}
+	})
+	return err
 }
 
 func (z *ZmqMultiGcounter) Start() error {
@@ -113,9 +134,11 @@ func (c *ZmqMultiGcounter) GetCounter(name string) *PersistentGCounter {
 }
 
 func (c *ZmqMultiGcounter) PersistSync() {
-	for _, counter := range c.inner {
-		counter.PersistSync()
-	}
+	phony.Block(c, func() {
+		for _, counter := range c.inner {
+			counter.PersistSync()
+		}
+	})
 }
 
 func (c *ZmqMultiGcounter) PersistOneSync(name string) {
@@ -171,4 +194,11 @@ func nameOrSingleton(name string) string {
 		return name
 	}
 	return "singleton"
+}
+
+func getCounterName(filename string) (string, bool) {
+	if filepath.Ext(filename) != ".gcounter" {
+		return "", false
+	}
+	return getFilenameWithoutExtension(filename), true
 }

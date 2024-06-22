@@ -120,6 +120,38 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c1.PersistSync()
 	})
 
+	t.Run("eagerly loading and notifying the initial state of all counters", func(t *testing.T) {
+		port1 := randomPort()
+
+		tempDir := t.TempDir()
+		{
+			c1 := NewZmqMultiGcounter("1", tempDir, "tcp://:"+port1)
+			assert.NoError(t, c1.Start())
+			c1.Increment(name1)
+			c1.Increment(name1)
+			c1.Increment(name2)
+			waitForMultiGcounterValueOf(t, 2, c1, name1)
+			waitForMultiGcounterValueOf(t, 1, c1, name2)
+			c1.PersistSync()
+			c1.Stop()
+		}
+
+		testObserver := newTestCounterObserver()
+		c1 := NewObservableZmqMultiGcounter("1", tempDir, "tcp://:"+port1, testObserver)
+		defer c1.Stop()
+		assert.NoError(t, c1.Start())
+
+		testObserver.WaitForGtValuesSeen(t, 0)
+
+		assert.Len(t, c1.inner, 0)
+
+		c1.LoadAllSync()
+
+		assert.Len(t, c1.inner, 2)
+
+		c1.PersistSync()
+	})
+
 	t.Run("multiple counters", func(t *testing.T) {
 		port1 := randomPort()
 		tempDir := t.TempDir()
