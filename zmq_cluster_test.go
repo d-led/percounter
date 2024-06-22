@@ -61,7 +61,8 @@ func TestZmqCluster(t *testing.T) {
 		port1 := randomPort()
 		port2 := randomPort()
 		l1 := newTestListener()
-		c1 := NewZmqCluster("1", "tcp://:"+port1, l1)
+		c1 := NewZmqCluster("1", "tcp://:"+port1)
+		c1.AddListenerSync(l1)
 		t.Cleanup(c1.Stop)
 		assert.NoError(t, c1.Start())
 		// no repeated starts
@@ -73,7 +74,8 @@ func TestZmqCluster(t *testing.T) {
 		l1.WaitForNumberOfMessagesReceivedEq(t, 0)
 
 		l2 := newTestListener()
-		c2 := NewZmqCluster("2", "tcp://:"+port2, l2)
+		c2 := NewZmqCluster("2", "tcp://:"+port2)
+		c2.AddListenerSync(l2)
 		t.Cleanup(c2.Stop)
 		assert.NoError(t, c2.Start())
 		l2.WaitForNumberOfMessagesReceivedEq(t, 0)

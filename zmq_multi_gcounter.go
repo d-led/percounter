@@ -28,7 +28,8 @@ func NewObservableZmqMultiGcounter(identity, dirname, bindAddr string, observer 
 		dirname:  dirname,
 		observer: observer,
 	}
-	cluster := NewZmqCluster(identity, bindAddr, res)
+	cluster := NewZmqCluster(identity, bindAddr)
+	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = make(map[string]*PersistentGCounter)
 	return res

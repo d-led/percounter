@@ -37,11 +37,11 @@ type ZmqCluster struct {
 	myIdentity        string
 }
 
-func NewZmqCluster(identity, bindAddr string, listener ClusterListener) *ZmqCluster {
+func NewZmqCluster(identity, bindAddr string) *ZmqCluster {
 	ctx, cancel := context.WithCancel(context.Background())
 	res := &ZmqCluster{
 		bindAddr:          bindAddr,
-		listeners:         []ClusterListener{listener},
+		listeners:         []ClusterListener{},
 		server:            zmq4.NewPull(ctx),
 		peers:             make(map[string]zmq4.Socket),
 		ctx:               ctx,
@@ -77,6 +77,12 @@ func (z *ZmqCluster) Stop() {
 
 		log.Printf("%s: disconnecting", z.myIdentity)
 		z.server.Close()
+	})
+}
+
+func (z *ZmqCluster) AddListenerSync(listener ClusterListener) {
+	phony.Block(z, func() {
+		z.listeners = append(z.listeners, listener)
 	})
 }
 

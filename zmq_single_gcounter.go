@@ -15,7 +15,8 @@ type ZmqSingleGcounter struct {
 
 func NewObservableZmqSingleGcounter(identity, filename, bindAddr string, observer CounterObserver) *ZmqSingleGcounter {
 	res := &ZmqSingleGcounter{}
-	cluster := NewZmqCluster(identity, bindAddr, res)
+	cluster := NewZmqCluster(identity, bindAddr)
+	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = NewPersistentGCounterWithSinkAndObserver(identity, filename, res, observer)
 	return res
@@ -23,7 +24,8 @@ func NewObservableZmqSingleGcounter(identity, filename, bindAddr string, observe
 
 func NewZmqSingleGcounter(identity, filename, bindAddr string) *ZmqSingleGcounter {
 	res := &ZmqSingleGcounter{}
-	cluster := NewZmqCluster(identity, bindAddr, res)
+	cluster := NewZmqCluster(identity, bindAddr)
+	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = NewPersistentGCounterWithSink(identity, filename, res)
 	return res
