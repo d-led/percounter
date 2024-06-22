@@ -2,7 +2,6 @@ package percounter
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/Arceliar/phony"
@@ -96,13 +95,15 @@ func (z *ZmqSingleGcounter) propagateStateSync(s GCounterState) {
 	z.cluster.BroadcastMessage(msg)
 }
 
-func (z *ZmqSingleGcounter) sendMyStateToPeer(peer string) error {
-	s := z.inner.GetState()
-	msg, err := json.Marshal(s)
-	if err != nil {
-		return fmt.Errorf("%s: error serializing state: %v", s.Name, err)
-	}
-	// sent async - no error handling for now
-	z.cluster.SendMessageToPeer(peer, msg)
-	return nil
+func (z *ZmqSingleGcounter) sendMyStateToPeer(peer string) {
+	z.Act(z, func() {
+		s := z.inner.GetState()
+		msg, err := json.Marshal(s)
+		if err != nil {
+			log.Printf("%s: error serializing state: %v", s.Name, err)
+			return
+		}
+		// sent async - no error handling for now
+		z.cluster.SendMessageToPeer(peer, msg)
+	})
 }
