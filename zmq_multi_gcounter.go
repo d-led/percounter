@@ -18,7 +18,7 @@ type ZmqMultiGcounter struct {
 	observer CounterObserver
 }
 
-func NewObservableZmqMultiGcounter(identity, dirname, bindAddr string, observer CounterObserver) *ZmqMultiGcounter {
+func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster Cluster, observer CounterObserver) *ZmqMultiGcounter {
 	err := os.MkdirAll(dirname, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -28,11 +28,19 @@ func NewObservableZmqMultiGcounter(identity, dirname, bindAddr string, observer 
 		dirname:  dirname,
 		observer: observer,
 	}
-	cluster := NewZmqCluster(identity, bindAddr)
 	cluster.AddListenerSync(res)
 	res.cluster = cluster
 	res.inner = make(map[string]*PersistentGCounter)
 	return res
+}
+
+func NewObservableZmqMultiGcounter(identity, dirname, bindAddr string, observer CounterObserver) *ZmqMultiGcounter {
+	cluster := NewZmqCluster(identity, bindAddr)
+	return NewObservableZmqMultiGcounterInCluster(identity, dirname, cluster, observer)
+}
+
+func NewZmqMultiGcounterInCluster(identity, dirname string, cluster Cluster) *ZmqMultiGcounter {
+	return NewObservableZmqMultiGcounterInCluster(identity, dirname, cluster, &noOpCounterObserver{})
 }
 
 func NewZmqMultiGcounter(identity, dirname, bindAddr string) *ZmqMultiGcounter {

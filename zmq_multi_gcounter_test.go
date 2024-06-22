@@ -143,6 +143,44 @@ func TestZmqMultiGcounter(t *testing.T) {
 
 		c.PersistSync()
 	})
+
+	t.Run("!!!do not do this yet!!! re-using an existing cluster but the named counters are not synced", func(t *testing.T) {
+		port1 := randomPort()
+		c := NewZmqCluster("1", "tcp://:"+port1)
+		t.Cleanup(c.Stop)
+
+		tempDir1 := t.TempDir()
+		c1 := NewZmqMultiGcounterInCluster("1", tempDir1, c)
+		c.AddListenerSync(c1)
+		assert.NoError(t, c1.Start())
+
+		tempDir2 := t.TempDir()
+		c2 := NewZmqMultiGcounterInCluster("2", tempDir2, c)
+		assert.NoError(t, c2.Start())
+
+		c1.Increment(name1) //1
+		c1.Increment(name2)
+		c1.Increment(name2) //2
+
+		c2.Increment(name1)
+		c2.Increment(name2)
+		c2.Increment(name2)
+		c2.Increment(name1)
+		c2.Increment(name2)
+		c2.Increment(name1) //3
+		c2.Increment(name2) //4
+
+		waitForMultiGcounterValueOf(t, 4, c2, name2)
+		waitForMultiGcounterValueOf(t, 3, c2, name1)
+
+		waitForMultiGcounterValueOf(t, 2, c1, name2)
+		waitForMultiGcounterValueOf(t, 1, c1, name1)
+
+		c1.PersistSync()
+		c2.PersistSync()
+
+		// here be dragons! c.UpdatePeers(...)
+	})
 }
 
 func waitForMultiGcounterValueOf(t *testing.T, expectedValue int64, c *ZmqMultiGcounter, name string) {
