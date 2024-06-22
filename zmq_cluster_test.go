@@ -75,7 +75,7 @@ func TestZmqCluster(t *testing.T) {
 
 		l2 := newTestListener()
 		c2 := NewZmqCluster("2", "tcp://:"+port2)
-		c2.AddListenerSync(l2)
+		c2.AddListener(l2)
 		t.Cleanup(c2.Stop)
 		assert.NoError(t, c2.Start())
 		l2.WaitForNumberOfMessagesReceivedEq(t, 0)

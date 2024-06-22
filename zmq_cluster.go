@@ -86,6 +86,12 @@ func (z *ZmqCluster) AddListenerSync(listener ClusterListener) {
 	})
 }
 
+func (z *ZmqCluster) AddListener(listener ClusterListener) {
+	z.Act(z, func() {
+		z.listeners = append(z.listeners, listener)
+	})
+}
+
 // UpdatePeers adds new connections and removes ones not present in the input
 func (z *ZmqCluster) UpdatePeers(peers []string) {
 	z.Act(z, func() {
