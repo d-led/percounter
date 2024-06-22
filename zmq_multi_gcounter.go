@@ -72,7 +72,7 @@ func (z *ZmqMultiGcounter) Start() error {
 func (z *ZmqMultiGcounter) Stop() {
 	z.stop()
 	phony.Block(z, func() {
-		log.Println("disconnecting", z.identity)
+		log.Printf("%s: disconnecting", z.identity)
 		z.server.Close()
 	})
 }
@@ -235,4 +235,18 @@ func nameOrSingleton(name string) string {
 		return name
 	}
 	return "singleton"
+}
+
+func sendStateToPeerSync(c zmq4.Socket, s GCounterState) {
+	msg, err := json.Marshal(s)
+	if err != nil {
+		log.Printf("%s: error serializing state: %v", s.Name, err)
+		return
+	}
+
+	err = c.Send(zmq4.NewMsg(msg))
+	if err != nil {
+		log.Printf("%s: error sending state to peer: %v", s.Name, err)
+		return
+	}
 }

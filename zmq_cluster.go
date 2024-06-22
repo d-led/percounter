@@ -18,7 +18,10 @@ type ClusterListener interface {
 
 type Cluster interface {
 	UpdatePeers(peers []string)
+	SendMessageToPeer(peer string, message []byte)
 	BroadcastMessage(message []byte)
+	Start() error
+	Stop()
 }
 
 type ZmqCluster struct {
@@ -72,7 +75,7 @@ func (z *ZmqCluster) Stop() {
 	// this must be synchronized
 	phony.Block(z, func() {
 
-		log.Println("disconnecting", z.myIdentity)
+		log.Printf("%s: disconnecting", z.myIdentity)
 		z.server.Close()
 	})
 }
@@ -116,13 +119,31 @@ func (z *ZmqCluster) BroadcastMessage(message []byte) {
 		}
 
 		for _, client := range z.peers {
-			err := client.Send(zmq4.NewMsg(message))
+			err := z.sendToPeerSync(client, message)
 			if err != nil {
 				log.Printf("%s: error sending state state: %v", z.myIdentity, err)
 				continue
 			}
 		}
 	})
+}
+
+func (z *ZmqCluster) SendMessageToPeer(peer string, message []byte) {
+	z.Act(z, func() {
+		client, ok := z.peers[peer]
+		if !ok {
+			log.Printf("%s: client not found for peer %s", z.myIdentity, peer)
+			return
+		}
+		err := z.sendToPeerSync(client, message)
+		if err != nil {
+			log.Printf("%s: failed sending a message to peer %s: %v", z.myIdentity, peer, err)
+		}
+	})
+}
+
+func (z *ZmqCluster) sendToPeerSync(client zmq4.Socket, message []byte) error {
+	return client.Send(zmq4.NewMsg(message))
 }
 
 func (z *ZmqCluster) receiveLoop() {
