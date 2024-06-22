@@ -26,7 +26,7 @@ type Cluster interface {
 
 type ZmqCluster struct {
 	phony.Inbox
-	listener          ClusterListener
+	listeners         []ClusterListener
 	bindAddr          string
 	server            zmq4.Socket
 	peers             map[string]zmq4.Socket
@@ -41,7 +41,7 @@ func NewZmqCluster(identity, bindAddr string, listener ClusterListener) *ZmqClus
 	ctx, cancel := context.WithCancel(context.Background())
 	res := &ZmqCluster{
 		bindAddr:          bindAddr,
-		listener:          listener,
+		listeners:         []ClusterListener{listener},
 		server:            zmq4.NewPull(ctx),
 		peers:             make(map[string]zmq4.Socket),
 		ctx:               ctx,
@@ -105,7 +105,9 @@ func (z *ZmqCluster) UpdatePeers(peers []string) {
 					continue
 				}
 				z.peers[peer] = socket
-				z.listener.OnNewPeerConnected(z, peer)
+				for _, listener := range z.listeners {
+					listener.OnNewPeerConnected(z, peer)
+				}
 			}
 		}
 	})
@@ -167,7 +169,9 @@ func (z *ZmqCluster) receiveLoop() {
 			}
 			return
 		}
-		z.listener.OnMessage(msg.Bytes())
+		for _, listener := range z.listeners {
+			listener.OnMessage(msg.Bytes())
+		}
 	}
 }
 
