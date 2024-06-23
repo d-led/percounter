@@ -14,13 +14,14 @@ import (
 
 type ZmqMultiGcounter struct {
 	phony.Inbox
-	dirname         string
-	identity        string
-	peers           []string //for tracing only
-	inner           map[string]*PersistentGCounter
-	cluster         zmqcluster.Cluster
-	observer        CounterObserver
-	clusterObserver ClusterObserver
+	dirname               string
+	identity              string
+	peers                 []string //for tracing only
+	inner                 map[string]*PersistentGCounter
+	cluster               zmqcluster.Cluster
+	observer              CounterObserver
+	clusterObserver       ClusterObserver
+	shouldPersistOnSignal bool
 }
 
 func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.Cluster, observer CounterObserver) *ZmqMultiGcounter {
@@ -56,6 +57,12 @@ func NewZmqMultiGcounter(identity, dirname, bindAddr string) *ZmqMultiGcounter {
 func (z *ZmqMultiGcounter) SetClusterObserver(o ClusterObserver) {
 	phony.Block(z, func() {
 		z.clusterObserver = o
+	})
+}
+
+func (z *ZmqMultiGcounter) ShouldPersistOnSignal() {
+	phony.Block(z, func() {
+		z.shouldPersistOnSignal = true
 	})
 }
 
@@ -172,6 +179,9 @@ func (z *ZmqMultiGcounter) getOrCreateCounterSync(name string) *PersistentGCount
 	counter.inner.state.Name = name
 	// to do: improve construction
 	z.inner[name] = counter
+	if z.shouldPersistOnSignal {
+		GlobalEmergencyPersistence().AddForPersistence(counter)
+	}
 	return counter
 }
 
