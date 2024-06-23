@@ -14,11 +14,13 @@ import (
 
 type ZmqMultiGcounter struct {
 	phony.Inbox
-	dirname  string
-	identity string
-	inner    map[string]*PersistentGCounter
-	cluster  zmqcluster.Cluster
-	observer CounterObserver
+	dirname         string
+	identity        string
+	peers           []string //for tracing only
+	inner           map[string]*PersistentGCounter
+	cluster         zmqcluster.Cluster
+	observer        CounterObserver
+	clusterObserver ClusterObserver
 }
 
 func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.Cluster, observer CounterObserver) *ZmqMultiGcounter {
@@ -30,6 +32,7 @@ func NewObservableZmqMultiGcounterInCluster(identity, dirname string, cluster zm
 		identity: identity,
 		dirname:  dirname,
 		observer: observer,
+		peers:    []string{},
 	}
 	cluster.AddListenerSync(res)
 	res.cluster = cluster
@@ -48,6 +51,12 @@ func NewZmqMultiGcounterInCluster(identity, dirname string, cluster zmqcluster.C
 
 func NewZmqMultiGcounter(identity, dirname, bindAddr string) *ZmqMultiGcounter {
 	return NewObservableZmqMultiGcounter(identity, dirname, bindAddr, &noOpCounterObserver{})
+}
+
+func (z *ZmqMultiGcounter) SetClusterObserver(o ClusterObserver) {
+	phony.Block(z, func() {
+		z.clusterObserver = o
+	})
 }
 
 func (z *ZmqMultiGcounter) LoadAllSync() error {
@@ -78,13 +87,16 @@ func (z *ZmqMultiGcounter) Stop() {
 }
 
 func (z *ZmqMultiGcounter) OnMessage(message []byte) {
-	state := GCounterState{}
+	state := NetworkedGCounterState{}
 	err := json.Unmarshal(message, &state)
 	if err != nil {
 		log.Printf("%s: failed to deserialize state: %v", z.identity, err)
 		return
 	}
-	z.MergeWith(NewGCounterFromState(state.Name, state))
+	z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
+	if z.clusterObserver != nil {
+		z.clusterObserver.AfterMessageReceived(state.SourcePeer, state)
+	}
 }
 
 func (z *ZmqMultiGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string) {
@@ -93,6 +105,9 @@ func (z *ZmqMultiGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string)
 
 func (z *ZmqMultiGcounter) UpdatePeers(peers []string) {
 	z.cluster.UpdatePeers(peers)
+	z.Act(z, func() {
+		z.peers = peers
+	})
 }
 
 func (z *ZmqMultiGcounter) Increment(name string) {
@@ -167,6 +182,12 @@ func (z *ZmqMultiGcounter) propagateStateSync(s GCounterState) {
 		return
 	}
 	z.cluster.BroadcastMessage(msg)
+	if z.clusterObserver == nil {
+		return
+	}
+	for _, peer := range z.peers {
+		z.clusterObserver.AfterMessageSent(peer, msg)
+	}
 }
 
 func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
@@ -174,13 +195,21 @@ func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
 		// send all counters
 		for _, counter := range z.inner {
 			s := counter.GetState()
-			msg, err := json.Marshal(s)
+			networkedState := NetworkedGCounterState{
+				SourcePeer: z.identity,
+				Name:       s.Name,
+				Peers:      s.Peers,
+			}
+			msg, err := json.Marshal(networkedState)
 			if err != nil {
 				log.Printf("%s: error serializing state: %v", s.Name, err)
 				return
 			}
 			// sent async - no error handling for now
 			z.cluster.SendMessageToPeer(peer, msg)
+			if z.clusterObserver != nil {
+				z.clusterObserver.AfterMessageSent(peer, msg)
+			}
 		}
 	})
 }

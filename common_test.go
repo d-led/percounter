@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Arceliar/phony"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,45 +40,6 @@ type testGCounterStateSink struct {
 
 func (sink *testGCounterStateSink) SetState(s GCounterState) {
 	sink.lastState = s
-}
-
-type testCounterObserver struct {
-	phony.Inbox
-	valuesSeen []CountEvent
-}
-
-func newTestCounterObserver() *testCounterObserver {
-	return &testCounterObserver{
-		valuesSeen: []CountEvent{},
-	}
-}
-
-func (o *testCounterObserver) OnNewCount(c CountEvent) {
-	o.Act(o, func() {
-		o.valuesSeen = append(o.valuesSeen, c)
-	})
-}
-
-func (o *testCounterObserver) GtValuesSeen() []CountEvent {
-	var res []CountEvent
-	phony.Block(o, func() {
-		res = append(res, o.valuesSeen...)
-	})
-	return res
-}
-
-func (o *testCounterObserver) WaitForGtValuesSeen(t *testing.T, expectedCount int) []CountEvent {
-	for w := 0; w < 15; w++ {
-		if expectedCount == len(o.GtValuesSeen()) {
-			// all ok
-			return o.GtValuesSeen()
-		}
-		log.Printf("waiting for the event count to arrive at the expected value of %d ...", expectedCount)
-		time.Sleep(100 * time.Millisecond)
-	}
-	res := o.GtValuesSeen()
-	assert.Equal(t, expectedCount, len(res))
-	return res
 }
 
 func randomPort() string {

@@ -22,6 +22,11 @@ type CountEvent struct {
 	Count int64
 }
 
+type ClusterObserver interface {
+	AfterMessageSent(peer string, msg interface{})
+	AfterMessageReceived(peer string, msg interface{})
+}
+
 type CounterObserver interface {
 	OnNewCount(ev CountEvent)
 }

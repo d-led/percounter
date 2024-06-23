@@ -20,21 +20,29 @@ func TestZmqMultiGcounter(t *testing.T) {
 		port1 := randomPort()
 		port2 := randomPort()
 		testObserver := newTestCounterObserver()
+		clusterObserver1 := newTestClusterObserver()
 		c1 := NewObservableZmqMultiGcounter("1", tempDir1, "tcp://:"+port1, testObserver)
+		c1.SetClusterObserver(clusterObserver1)
 		defer c1.Stop()
 		assert.NoError(t, c1.Start())
 		// no starts are idempotent
 		assert.NoError(t, c1.Start())
 		c1.Increment(name1)
 		waitForMultiGcounterValueOf(t, 1, c1, name1)
+		// no peers yet
+		assert.Len(t, clusterObserver1.MessagesReceived(), 0)
 
+		clusterObserver2 := newTestClusterObserver()
 		c2 := NewZmqMultiGcounter("2", tempDir2, "tcp://:"+port2)
+		c2.SetClusterObserver(clusterObserver2)
 		defer c2.Stop()
 		assert.NoError(t, c2.Start())
 
 		// upon c1 discovering a new peer, c2 should merge from c1
 		c1.UpdatePeers([]string{"tcp://localhost:" + port2})
 		waitForMultiGcounterValueOf(t, 1, c2, name1)
+		assert.Len(t, clusterObserver1.MessagesSent(), 1)
+		assert.Len(t, clusterObserver2.MessagesReceived(), 1)
 
 		// until now, only the first 2 values should have been observed
 		assert.Equal(t, []CountEvent{

@@ -7,6 +7,12 @@ type GCounterState struct {
 	Peers map[string]int64 `json:"peers"`
 }
 
+type NetworkedGCounterState struct {
+	SourcePeer string           `json:"source_peer"`
+	Name       string           `json:"name"`
+	Peers      map[string]int64 `json:"peers"`
+}
+
 func NewGcounterState() GCounterState {
 	return NewNamedGcounterState("singleton")
 }
