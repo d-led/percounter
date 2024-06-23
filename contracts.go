@@ -13,6 +13,10 @@ type QueryableCounter interface {
 	ValueSource
 }
 
+type Persistent interface {
+	PersistSync()
+}
+
 type ValueSource interface {
 	Value() int64
 }
