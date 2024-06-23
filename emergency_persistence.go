@@ -20,13 +20,22 @@ type EmergencyPersistence struct {
 	signals   chan os.Signal
 }
 
-func (s *EmergencyPersistence) AddForPersistence(p Persistent) {
-	s.Act(s, func() {
-		if len(s.toPersist) == 0 {
-			s.signals = make(chan os.Signal, 1)
-			signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM)
+func (s *EmergencyPersistence) Init() {
+	phony.Block(s, func() {
+		if len(s.toPersist) > 0 {
+			// already initialized
+			return
 		}
 
+		// initialize on demand or upon first add
+		s.signals = make(chan os.Signal, 1)
+		signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM)
+	})
+}
+
+func (s *EmergencyPersistence) AddForPersistence(p Persistent) {
+	s.Init()
+	phony.Block(s, func() {
 		s.toPersist = append(s.toPersist, p)
 		s.wg.Add(1)
 	})
