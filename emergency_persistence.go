@@ -4,57 +4,51 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"slices"
 	"sync"
 	"syscall"
-
-	"github.com/Arceliar/phony"
 )
 
 var globalEmergencyPersistence EmergencyPersistence
 
 type EmergencyPersistence struct {
-	phony.Inbox
-	wg        sync.WaitGroup
-	toPersist []Persistent
+	toPersist sync.Map
 	signals   chan os.Signal
+	done      chan bool
 }
 
 func (s *EmergencyPersistence) Init() {
-	phony.Block(s, func() {
-		if len(s.toPersist) > 0 {
-			// already initialized
-			return
-		}
+	if s.signals != nil {
+		// already initialized
+		return
+	}
 
-		// initialize on demand or upon first add
-		s.signals = make(chan os.Signal, 1)
-		signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM)
-	})
+	// initialize on demand or upon first add
+	s.signals = make(chan os.Signal, 1)
+	s.done = make(chan bool, 1)
+	signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM)
 }
 
 func (s *EmergencyPersistence) AddForPersistence(p Persistent) {
 	s.Init()
-	phony.Block(s, func() {
-		s.toPersist = append(s.toPersist, p)
-		s.wg.Add(1)
-	})
+	s.toPersist.Store(p, true)
 }
 
 func (s *EmergencyPersistence) PersistAndExitOnSignal() {
-	phony.Block(s, func() {
-		toPersist := slices.Clone(s.toPersist)
-		go func() {
-			sig := <-s.signals
-			log.Printf("Received signal: %v, persisting", sig)
-			for _, p := range toPersist {
-				p.PersistSync()
-				log.Println(".")
-				s.wg.Done()
-			}
-		}()
-	})
-	s.wg.Wait()
+	if s.signals == nil {
+		return
+	}
+	go func() {
+		sig := <-s.signals
+		log.Printf("Received signal: %v, persisting", sig)
+		s.toPersist.Range(func(p, _ any) bool {
+			p.(Persistent).PersistSync()
+			log.Println(".")
+			return true
+		})
+		s.done <- true
+	}()
+	<-s.done
+	log.Println("exiting")
 	os.Exit(0)
 }
 
@@ -64,6 +58,6 @@ func GlobalEmergencyPersistence() *EmergencyPersistence {
 
 func init() {
 	globalEmergencyPersistence = EmergencyPersistence{
-		toPersist: []Persistent{},
+		toPersist: sync.Map{},
 	}
 }
