@@ -25,7 +25,12 @@ func (s *EmergencyPersistence) Init() {
 	// initialize on demand or upon first add
 	s.signals = make(chan os.Signal, 1)
 	s.done = make(chan bool, 1)
-	signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(s.signals,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
 }
 
 func (s *EmergencyPersistence) AddForPersistence(p Persistent) {
