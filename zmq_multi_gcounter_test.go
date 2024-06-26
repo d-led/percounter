@@ -63,6 +63,13 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c1.PersistSync()
 		c2.PersistSync()
 
+		// 1 c1 sync after connect
+		assert.Len(t, clusterObserver1.MessagesSent(), 1)
+		assert.Len(t, clusterObserver2.MessagesReceived(), 1)
+		// 1 broadcast on merge + 1 incremement from c2
+		assert.Len(t, clusterObserver1.MessagesReceived(), 2)
+		assert.Len(t, clusterObserver2.MessagesSent(), 2)
+
 		// now all should have been observed
 		assert.Equal(t, []CountEvent{
 			{name1, 0},

@@ -101,7 +101,7 @@ func (z *ZmqMultiGcounter) OnMessage(message []byte) {
 		return
 	}
 	if state.Type != GCounterNetworkMessage {
-		log.Printf("unknown message type received: %s, ignoring", state.Name)
+		log.Printf("unknown message type '%s' received: name:%s, source_peer:%s, ignoring", state.Type, state.Name, state.SourcePeer)
 		return
 	}
 
@@ -192,7 +192,13 @@ func (z *ZmqMultiGcounter) getOrCreateCounterSync(name string) *PersistentGCount
 }
 
 func (z *ZmqMultiGcounter) propagateStateSync(s GCounterState) {
-	msg, err := json.Marshal(s)
+	networkedState := NetworkedGCounterState{
+		Type:       GCounterNetworkMessage,
+		SourcePeer: z.identity,
+		Name:       s.Name,
+		Peers:      s.Peers,
+	}
+	msg, err := json.Marshal(networkedState)
 	if err != nil {
 		log.Printf("%s: error serializing state: %v", s.Name, err)
 		return
