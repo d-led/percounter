@@ -93,7 +93,7 @@ func (z *ZmqMultiGcounter) Stop() {
 	z.cluster.Stop()
 }
 
-func (z *ZmqMultiGcounter) OnMessage(message []byte) {
+func (z *ZmqMultiGcounter) OnMessage(identity []byte, message []byte) {
 	state := NetworkedGCounterState{}
 	err := json.Unmarshal(message, &state)
 	if err != nil {
@@ -107,8 +107,14 @@ func (z *ZmqMultiGcounter) OnMessage(message []byte) {
 
 	z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
 
+	peer := string(identity)
+
+	if len(identity) == 0 {
+		peer = state.SourcePeer
+	}
+
 	if z.clusterObserver != nil {
-		z.clusterObserver.AfterMessageReceived(state.SourcePeer, message)
+		z.clusterObserver.AfterMessageReceived(peer, message)
 	}
 }
 

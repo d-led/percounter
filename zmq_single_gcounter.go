@@ -48,7 +48,7 @@ func (z *ZmqSingleGcounter) Stop() {
 	z.cluster.Stop()
 }
 
-func (z *ZmqSingleGcounter) OnMessage(message []byte) {
+func (z *ZmqSingleGcounter) OnMessage(_ []byte, message []byte) {
 	state := GCounterState{}
 	err := json.Unmarshal(message, &state)
 	if err != nil {
