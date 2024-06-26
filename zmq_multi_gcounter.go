@@ -100,9 +100,15 @@ func (z *ZmqMultiGcounter) OnMessage(message []byte) {
 		log.Printf("%s: failed to deserialize state: %v", z.identity, err)
 		return
 	}
+	if state.Type != GCounterNetworkMessage {
+		log.Printf("unknown message type received: %s, ignoring", state.Name)
+		return
+	}
+
 	z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
+
 	if z.clusterObserver != nil {
-		z.clusterObserver.AfterMessageReceived(state.SourcePeer, state)
+		z.clusterObserver.AfterMessageReceived(state.SourcePeer, message)
 	}
 }
 
@@ -206,6 +212,7 @@ func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
 		for _, counter := range z.inner {
 			s := counter.GetState()
 			networkedState := NetworkedGCounterState{
+				Type:       GCounterNetworkMessage,
 				SourcePeer: z.identity,
 				Name:       s.Name,
 				Peers:      s.Peers,

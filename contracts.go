@@ -1,5 +1,7 @@
 package percounter
 
+const GCounterNetworkMessage = "g-counter.network.message"
+
 type GCounterStateSource interface {
 	GetState() GCounterState
 }
@@ -27,8 +29,8 @@ type CountEvent struct {
 }
 
 type ClusterObserver interface {
-	AfterMessageSent(peer string, msg interface{})
-	AfterMessageReceived(peer string, msg interface{})
+	AfterMessageSent(peer string, msg []byte)
+	AfterMessageReceived(peer string, msg []byte)
 }
 
 type CounterObserver interface {

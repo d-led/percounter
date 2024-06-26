@@ -11,7 +11,7 @@ import (
 
 type testMessageEvent struct {
 	peer string
-	msg  interface{}
+	msg  []byte
 }
 
 type testCounterObserver struct {
@@ -66,13 +66,13 @@ func newTestClusterObserver() *testClusterObserver {
 	}
 }
 
-func (o *testClusterObserver) AfterMessageSent(peer string, msg interface{}) {
+func (o *testClusterObserver) AfterMessageSent(peer string, msg []byte) {
 	o.Act(o, func() {
 		o.messagesSent = append(o.messagesSent, testMessageEvent{peer, msg})
 	})
 }
 
-func (o *testClusterObserver) AfterMessageReceived(peer string, msg interface{}) {
+func (o *testClusterObserver) AfterMessageReceived(peer string, msg []byte) {
 	o.Act(o, func() {
 		o.messagesReceived = append(o.messagesReceived, testMessageEvent{peer, msg})
 	})

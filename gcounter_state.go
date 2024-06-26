@@ -8,6 +8,7 @@ type GCounterState struct {
 }
 
 type NetworkedGCounterState struct {
+	Type       string           `json:"type"`
 	SourcePeer string           `json:"source_peer"`
 	Name       string           `json:"name"`
 	Peers      map[string]int64 `json:"peers"`
