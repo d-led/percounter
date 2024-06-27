@@ -3,6 +3,8 @@ package percounter
 const GCounterNetworkMessage = "g-counter.network.message"
 const PeerOhaiNetworkMessage = "peer.ohai.network.message"
 const PeerHelloNetworkMessage = "peer.hello.network.message"
+const MyIPKey = "my_ip"
+const MyTcpPortKey = "my_tcp_port"
 
 type GCounterStateSource interface {
 	GetState() GCounterState

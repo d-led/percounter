@@ -2,7 +2,7 @@ package percounter
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -107,13 +107,18 @@ func (z *ZmqMultiGcounter) OnMessage(identity []byte, message []byte) {
 	case PeerOhaiNetworkMessage:
 		log.Printf("received an 'ohai' from %s, sending 'hello' back", string(identity))
 		peerIp, err := tryGetPeerIp(&state)
-		if peerIp != "" {
-			log.Println("sending 'hello' to", peerIp, err)
-		}
-		if err == nil {
-			z.sendHelloToPeer(peerIp)
-		} else {
+		if err != nil {
 			log.Printf("Error extracting peer IP from 'ohai': %v", err)
+			break
+		}
+		peerPort, err := tryGetPeerTcpPort(&state)
+		if err != nil {
+			log.Printf("Error extracting peer TCP port from 'ohai': %v", err)
+			break
+		}
+		if peerIp != "" && peerPort != "" {
+			log.Println("sending 'hello' to", peerIp, err)
+			z.sendHelloToPeer(zmqAddressOf(peerIp, peerPort))
 		}
 	case PeerHelloNetworkMessage:
 		log.Printf("received a 'hello' from %s", string(identity))
@@ -219,7 +224,7 @@ func (z *ZmqMultiGcounter) propagateStateSync(s GCounterState) {
 		SourcePeer: z.identity,
 		Name:       s.Name,
 		Peers:      s.Peers,
-		Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
+		Metadata:   z.myConnectionInfoSync(),
 	}
 	msg, err := json.Marshal(networkedState)
 	if err != nil {
@@ -245,7 +250,7 @@ func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
 				SourcePeer: z.identity,
 				Name:       s.Name,
 				Peers:      s.Peers,
-				Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
+				Metadata:   z.myConnectionInfoSync(),
 			}
 			msg, err := json.Marshal(networkedState)
 			if err != nil {
@@ -265,7 +270,7 @@ func (z *ZmqMultiGcounter) broadcastOhaiSync() {
 	ohai := NetworkedGCounterState{
 		Type:       PeerOhaiNetworkMessage,
 		SourcePeer: z.identity,
-		Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
+		Metadata:   z.myConnectionInfoSync(),
 	}
 	msg, err := json.Marshal(ohai)
 	if err != nil {
@@ -275,7 +280,7 @@ func (z *ZmqMultiGcounter) broadcastOhaiSync() {
 	z.cluster.BroadcastMessage(msg)
 }
 
-func (z *ZmqMultiGcounter) sendHelloToPeer(peerIp string) {
+func (z *ZmqMultiGcounter) sendHelloToPeer(peer string) {
 	ohai := NetworkedGCounterState{
 		Type:       PeerHelloNetworkMessage,
 		SourcePeer: z.identity,
@@ -286,23 +291,42 @@ func (z *ZmqMultiGcounter) sendHelloToPeer(peerIp string) {
 		log.Println("error serializing hello: ", err)
 		return
 	}
-	z.cluster.SendMessageToPeer(peerIp, msg)
+	z.cluster.SendMessageToPeer(peer, msg)
+}
+
+func zmqAddressOf(peerIp, peerPort string) string {
+	return fmt.Sprintf("tcp://[%s]:%s", peerIp, peerPort)
 }
 
 func tryGetPeerIp(msg *NetworkedGCounterState) (string, error) {
-	peerIpI, ok := msg.Metadata["my_ip"]
+	return tryGetPeerMetadataString(msg, MyIPKey)
+}
+
+func tryGetPeerTcpPort(msg *NetworkedGCounterState) (string, error) {
+	return tryGetPeerMetadataString(msg, MyTcpPortKey)
+}
+
+func tryGetPeerMetadataString(msg *NetworkedGCounterState, key string) (string, error) {
+	valI, ok := msg.Metadata[key]
 	if !ok {
-		return "", errors.New("no field 'my_ip' in message")
+		return "", fmt.Errorf("no field '%s' in message", key)
 	}
-	peerIP, ok := peerIpI.(string)
+	val, ok := valI.(string)
 	if !ok {
-		return "", errors.New("'my_ip' is not of type 'string'")
+		return "", fmt.Errorf("'%s' is not of type 'string'", key)
 	}
-	return peerIP, nil
+	return val, nil
 }
 
 func (z *ZmqMultiGcounter) multiCounterFilenameFor(name string) string {
 	return path.Join(z.dirname, name+".gcounter")
+}
+
+func (z *ZmqMultiGcounter) myConnectionInfoSync() map[string]interface{} {
+	return map[string]interface{}{
+		MyIPKey:      z.cluster.MyIP(),
+		MyTcpPortKey: z.cluster.MyTcpPort(),
+	}
 }
 
 func nameOrSingleton(name string) string {
