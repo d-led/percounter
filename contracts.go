@@ -1,6 +1,7 @@
 package percounter
 
 const GCounterNetworkMessage = "g-counter.network.message"
+const PeerOhaiNetworkMessage = "peer.ohai.network.message"
 
 type GCounterStateSource interface {
 	GetState() GCounterState

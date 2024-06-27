@@ -101,11 +101,11 @@ func (z *ZmqMultiGcounter) OnMessage(identity []byte, message []byte) {
 		return
 	}
 	if state.Type != GCounterNetworkMessage {
-		log.Printf("unknown message type '%s' received: name:%s, source_peer:%s, ignoring", state.Type, state.Name, state.SourcePeer)
+		log.Printf("unknown message type '%s' received: name:'%s', source_peer:'%s', ignoring", state.Type, state.Name, state.SourcePeer)
 		return
+	} else {
+		z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
 	}
-
-	z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
 
 	peer := string(identity)
 
@@ -123,9 +123,10 @@ func (z *ZmqMultiGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string)
 }
 
 func (z *ZmqMultiGcounter) UpdatePeers(peers []string) {
-	z.cluster.UpdatePeers(peers)
 	z.Act(z, func() {
+		z.cluster.UpdatePeers(peers)
 		z.peers = peers
+		z.broadcastOhaiSync()
 	})
 }
 
@@ -243,6 +244,20 @@ func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
 			}
 		}
 	})
+}
+
+func (z *ZmqMultiGcounter) broadcastOhaiSync() {
+	ohai := NetworkedGCounterState{
+		Type:       PeerOhaiNetworkMessage,
+		SourcePeer: z.identity,
+		Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
+	}
+	msg, err := json.Marshal(ohai)
+	if err != nil {
+		log.Println("error serializing ohai: ", err)
+		return
+	}
+	z.cluster.BroadcastMessage(msg)
 }
 
 func (z *ZmqMultiGcounter) multiCounterFilenameFor(name string) string {
