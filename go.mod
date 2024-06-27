@@ -4,7 +4,7 @@ go 1.22.4
 
 require (
 	github.com/Arceliar/phony v0.0.0-20220903101357-530938a4b13d
-	github.com/d-led/zmqcluster v0.0.4
+	github.com/d-led/zmqcluster v0.0.5
 	github.com/stretchr/testify v1.9.0
 )
 
