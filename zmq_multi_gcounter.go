@@ -2,6 +2,7 @@ package percounter
 
 import (
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"log"
 	"os"
@@ -100,11 +101,25 @@ func (z *ZmqMultiGcounter) OnMessage(identity []byte, message []byte) {
 		log.Printf("%s: failed to deserialize state: %v", z.identity, err)
 		return
 	}
-	if state.Type != GCounterNetworkMessage {
+	switch state.Type {
+	case GCounterNetworkMessage:
+		z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
+	case PeerOhaiNetworkMessage:
+		log.Printf("received an 'ohai' from %s, sending 'hello' back", string(identity))
+		peerIp, err := tryGetPeerIp(&state)
+		if peerIp != "" {
+			log.Println("sending 'hello' to", peerIp, err)
+		}
+		if err == nil {
+			z.sendHelloToPeer(peerIp)
+		} else {
+			log.Printf("Error extracting peer IP from 'ohai': %v", err)
+		}
+	case PeerHelloNetworkMessage:
+		log.Printf("received a 'hello' from %s", string(identity))
+	default:
 		log.Printf("unknown message type '%s' received: name:'%s', source_peer:'%s', ignoring", state.Type, state.Name, state.SourcePeer)
 		return
-	} else {
-		z.MergeWith(NewGCounterFromState(state.Name, GCounterState{state.Name, state.Peers}))
 	}
 
 	peer := string(identity)
@@ -258,6 +273,32 @@ func (z *ZmqMultiGcounter) broadcastOhaiSync() {
 		return
 	}
 	z.cluster.BroadcastMessage(msg)
+}
+
+func (z *ZmqMultiGcounter) sendHelloToPeer(peerIp string) {
+	ohai := NetworkedGCounterState{
+		Type:       PeerHelloNetworkMessage,
+		SourcePeer: z.identity,
+		Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
+	}
+	msg, err := json.Marshal(ohai)
+	if err != nil {
+		log.Println("error serializing hello: ", err)
+		return
+	}
+	z.cluster.SendMessageToPeer(peerIp, msg)
+}
+
+func tryGetPeerIp(msg *NetworkedGCounterState) (string, error) {
+	peerIpI, ok := msg.Metadata["my_ip"]
+	if !ok {
+		return "", errors.New("no field 'my_ip' in message")
+	}
+	peerIP, ok := peerIpI.(string)
+	if !ok {
+		return "", errors.New("'my_ip' is not of type 'string'")
+	}
+	return peerIP, nil
 }
 
 func (z *ZmqMultiGcounter) multiCounterFilenameFor(name string) string {
