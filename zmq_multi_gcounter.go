@@ -203,6 +203,7 @@ func (z *ZmqMultiGcounter) propagateStateSync(s GCounterState) {
 		SourcePeer: z.identity,
 		Name:       s.Name,
 		Peers:      s.Peers,
+		Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
 	}
 	msg, err := json.Marshal(networkedState)
 	if err != nil {
@@ -228,6 +229,7 @@ func (z *ZmqMultiGcounter) sendMyStateToPeer(peer string) {
 				SourcePeer: z.identity,
 				Name:       s.Name,
 				Peers:      s.Peers,
+				Metadata:   map[string]interface{}{"my_ip": z.cluster.MyIP()},
 			}
 			msg, err := json.Marshal(networkedState)
 			if err != nil {
