@@ -138,6 +138,12 @@ func (z *ZmqMultiGcounter) OnMessage(identity []byte, message []byte) {
 	}
 }
 
+func (z *ZmqMultiGcounter) OnMessageSent(peer string, message []byte) {
+	if z.clusterObserver != nil {
+		z.clusterObserver.AfterMessageSent(peer, message)
+	}
+}
+
 func (z *ZmqMultiGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string) {
 	z.sendMyStateToPeer(peer)
 }

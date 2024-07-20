@@ -41,7 +41,7 @@ func TestZmqMultiGcounter(t *testing.T) {
 		// upon c1 discovering a new peer, c2 should merge from c1
 		c1.UpdatePeers([]string{"tcp://localhost:" + port2})
 		waitForMultiGcounterValueOf(t, 1, c2, name1)
-		assert.Len(t, clusterObserver1.MessagesSent(), 1)
+		assert.Len(t, clusterObserver1.MessagesSent(), 3 /*1 ohai, 2 updates*/)
 		assert.Len(t, clusterObserver2.MessagesReceived(), 2)
 
 		// until now, only the first 2 values should have been observed
@@ -64,11 +64,11 @@ func TestZmqMultiGcounter(t *testing.T) {
 		c2.PersistSync()
 
 		// 1 c1 sync after connect
-		assert.Len(t, clusterObserver1.MessagesSent(), 1)
+		assert.Len(t, clusterObserver1.MessagesSent(), 3)
 		assert.Len(t, clusterObserver2.MessagesReceived(), 2 /*ohai+state*/)
 		// 1 broadcast on merge + 1 incremement from c2
 		assert.Len(t, clusterObserver1.MessagesReceived(), 3 /*ohai+hello+state*/)
-		assert.Len(t, clusterObserver2.MessagesSent(), 2)
+		assert.Len(t, clusterObserver2.MessagesSent(), 5)
 
 		// now all should have been observed
 		assert.Equal(t, []CountEvent{

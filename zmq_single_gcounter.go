@@ -58,6 +58,10 @@ func (z *ZmqSingleGcounter) OnMessage(_ []byte, message []byte) {
 	z.MergeWith(NewGCounterFromState("temporary-counter", state))
 }
 
+func (z *ZmqSingleGcounter) OnMessageSent(peer string, message []byte) {
+	// ignore for now
+}
+
 func (z *ZmqSingleGcounter) OnNewPeerConnected(c zmqcluster.Cluster, peer string) {
 	z.sendMyStateToPeer(peer)
 }
