@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/Arceliar/phony v0.0.0-20220903101357-530938a4b13d
-	github.com/d-led/zmqcluster v0.0.9
+	github.com/d-led/zmqcluster v0.0.10
 	github.com/stretchr/testify v1.11.1
 )
 
